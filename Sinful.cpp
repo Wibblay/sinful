@@ -9,6 +9,7 @@ int main(int argc, char* argv[])
 	{
 		std::cerr << "Received wrong number of arguments" << std::endl;
 		std::cerr << "Correct usage is './SinfulApp.exe <filename.sin>'" << std::endl;
+		throw;
 	}
 
 	std::string s(argv[1]);
@@ -18,7 +19,7 @@ int main(int argc, char* argv[])
 		std::cerr << "File name must end with '.sin'" << std::endl;
 	}
 
-	Compiler compiler(s);
+	Compiler compiler("../../../SinfulScripts/" + s, "../../assembly/" + s.substr(0, s.length() - 3) + "asm");
 	compiler.Compile();
 	
 	return EXIT_SUCCESS;
