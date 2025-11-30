@@ -13,6 +13,7 @@ enum class TokenType
 
 	// Operators
 	Plus,
+	Minus,
 };
 
 inline const std::string& tokenTypeToString(TokenType type)
@@ -23,6 +24,7 @@ inline const std::string& tokenTypeToString(TokenType type)
 	case TokenType::SemiColon:   return "SemiColon";
 	case TokenType::IntLiteral:  return "IntLiteral";
 	case TokenType::Plus:        return "Plus";
+	case TokenType::Minus:		 return "Minus";
 	default:                     return "NoStringMapping";
 	}
 }

@@ -29,6 +29,8 @@ public:
 			}
 			else if (line[i] == '+')
 				tokenised.emplace_back(Token(TokenType::Plus));
+			else if (line[i] == '-')
+				tokenised.emplace_back(Token(TokenType::Minus));
 			else if (line[i] == ';')
 				tokenised.push_back(Token(TokenType::SemiColon));
 			else

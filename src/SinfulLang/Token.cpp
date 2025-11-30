@@ -13,6 +13,9 @@ void Token::defaultToken()
 	case TokenType::Plus:
 		_lexeme = "+";
 		break;
+	case TokenType::Minus:
+		_lexeme = "-";
+		break;
 	default:
 		throw std::exception("Token type has no default constructor");
 	}
