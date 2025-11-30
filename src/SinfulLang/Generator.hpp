@@ -8,7 +8,7 @@
 class Generator
 {
 public:
-	static void WriteAsm(const std::string& path, const Token& token)
+	static void WriteAsm(const std::string& path, int value)
 	{
         static const char* asmCode1 =
             "option casemap:none\n"
@@ -49,7 +49,7 @@ public:
             throw std::runtime_error("Failed to open assembly output file: " + path);
 
         out << asmCode1;
-        out << "msg     db \"" << token.GetLabel() << "\", 0Ah, 0\n";
+        out << "msg     db \"" << std::to_string(value) << "\", 0Ah, 0\n";
         out << asmCode2;
 	}
 };

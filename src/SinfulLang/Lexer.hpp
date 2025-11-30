@@ -4,17 +4,17 @@
 #include <string>
 #include <expected>
 #include <exception>
-#include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "Token.hpp"
 
 class Lexer
 {
 public:
-	static std::vector<std::unique_ptr<Token>> TokeniseLine(const std::string& line)
+	static std::unique_ptr<TokenStream> TokeniseLine(const std::string& line)
 	{
-		std::vector<std::unique_ptr<Token>> tokenised;
+		std::vector<Token> tokenised;
 		for (size_t i = 0; i < line.length(); i++)
 		{
 			if (std::isspace(line[i]) != 0)
@@ -23,22 +23,21 @@ public:
 			{
 				auto res = ParseNumeric(line, i);
 				if (res)
-					tokenised.push_back(std::make_unique<LabelledToken>(TokenType::IntLiteral, *res));
+					tokenised.emplace_back(Token(TokenType::IntLiteral, *res));
 				else
 					throw res.error();
 			}
 			else if (line[i] == '+')
-				tokenised.push_back(std::make_unique<Token>(TokenType::Plus));
+				tokenised.emplace_back(Token(TokenType::Plus));
 			else if (line[i] == ';')
-				tokenised.push_back(std::make_unique<Token>(TokenType::SemiColon));
+				tokenised.push_back(Token(TokenType::SemiColon));
 			else
 			{
-				std::cerr << "Unrecognised character" << std::endl;
-				throw;
+				throw std::runtime_error("Unrecognised character");
 			}
 		}
 
-		return tokenised;
+		return std::make_unique<TokenStream>(tokenised);
 	}
 
 	static std::expected<std::string, std::exception> ParseNumeric(const std::string& line, size_t& index)
@@ -57,7 +56,7 @@ public:
 				return val;
 			}
 			else
-				return std::unexpected(std::exception("Variable name cannot start with numeric value"));
+				return std::unexpected(std::runtime_error("Variable name cannot start with numeric value"));
 		}
 
 		index--;

@@ -4,10 +4,12 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 #include "Generator.hpp"
 #include "Lexer.hpp"
+#include "Parser.hpp"
 #include "Token.hpp"
 
 class Compiler
@@ -22,13 +24,14 @@ public:
 		std::ifstream stream(_inputFile);
 
 		std::string lineBuffer;
+		std::istringstream lineStream;
 		while (std::getline(stream, lineBuffer))
 		{
-			std::cout << lineBuffer << std::endl;
 			if (lineBuffer.length() == 0)
 				continue;
-			std::vector<std::unique_ptr<Token>> tokens = Lexer::TokeniseLine(lineBuffer);
-			Generator::WriteAsm(_outputFile, *tokens[0]);
+			auto tokens = Lexer::TokeniseLine(lineBuffer);
+			std::unique_ptr<Node> root = ParseTokens(*tokens);
+			Generator::WriteAsm(_outputFile, root->Resolve());
 		}
 	}
 
