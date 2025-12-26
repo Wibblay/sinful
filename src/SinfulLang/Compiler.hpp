@@ -25,13 +25,14 @@ public:
 
 		std::string lineBuffer;
 		std::istringstream lineStream;
+		std::vector<std::shared_ptr<Node>> program;
 		while (std::getline(stream, lineBuffer))
 		{
 			if (lineBuffer.length() == 0)
 				continue;
-			auto tokens = Lexer::TokeniseLine(lineBuffer);
-			std::unique_ptr<Node> root = ParseTokens(*tokens);
-			Generator::WriteAsm(_outputFile, root->Resolve());
+			auto tokens = Lexer::tokeniseLine(lineBuffer);
+			std::shared_ptr<Node> tree = Parser::parseTokens(*tokens);
+			program.emplace_back(tree);
 		}
 	}
 

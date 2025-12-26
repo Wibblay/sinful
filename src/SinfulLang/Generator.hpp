@@ -1,13 +1,22 @@
 #pragma once
 
 #include <fstream>
+#include <sstream>
 #include <vector>
 
+#include "Node.hpp"
+#include "SymbolTable.hpp"
 #include "Token.hpp"
 
 class Generator
 {
 public:
+
+    const std::string generate() const;
+
+    void asmFromStatement(std::shared_ptr<Node> root);
+    
+
 	static void WriteAsm(const std::string& path, int value)
 	{
         static const char* asmCode1 =
@@ -51,5 +60,16 @@ public:
         out << asmCode1;
         out << "msg     db \"" << std::to_string(value) << "\", 0Ah, 0\n";
         out << asmCode2;
-	}
+	}  
+
+private:
+
+    void generateExpr(std::shared_ptr<Node> node);
+    void generateAssignment(std::shared_ptr<Node> node);
+
+    SymbolTable _symbolTable;
+    std::stringstream _dataSection;
+    std::stringstream _codeSection;
+    std::stringstream _stackVars;
+    int _labelCounter = 0;
 };
