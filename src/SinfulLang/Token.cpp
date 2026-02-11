@@ -1,71 +1,43 @@
 #include "Token.hpp"
 
-inline static const std::string& tokenTypeToString(TokenType type)
+std::string_view tokenTypeToString(TokenType type)
 {
 	switch (type)
 	{
-	case TokenType::NullToken:   return "NullToken";
-	case TokenType::SemiColon:   return "SemiColon";
-	case TokenType::Variable:	 return "Variable";
-	case TokenType::IntLiteral:  return "IntLiteral";
-	case TokenType::Equals:		 return "Equals";
-	case TokenType::Plus:        return "Plus";
-	case TokenType::Minus:		 return "Minus";
-	case TokenType::Star:		 return "Star";
-	case TokenType::Print:		 return "Print";
-	default:                     return "NoStringMapping";
+		using enum TokenType;
+		case NullToken:		return "NullToken";
+		case SemiColon:		return "SemiColon";
+		case Variable:		return "Variable";
+		case IntLiteral:	return "IntLiteral";
+		case Equals:		return "Equals";
+		case Plus:			return "Plus";
+		case Minus:			return "Minus";
+		case Star:			return "Star";
+		case Print:			return "Print";
+		default:            return "Unknown";
 	}
 }
 
-void Token::defaultToken()
+Token::Token(TokenType type) : _type(type)
 {
-	switch (_type)
+	switch (type)
 	{
-	case TokenType::NullToken:
-	case TokenType::Print:
-		_lexeme = "";
-		break;
-	case TokenType::SemiColon:
-		_lexeme = ";";
-		break;
-	case TokenType::Equals:
-		_lexeme = "=";
-		break;
-	case TokenType::Plus:
-		_lexeme = "+";
-		break;
-	case TokenType::Minus:
-		_lexeme = "-";
-		break;
-	case TokenType::Star:
-		_lexeme = "*";
-		break;
-	default:
-		throw std::exception("Token type has no default constructor");
+		using enum TokenType;
+		case NullToken: case Print: case Variable: case IntLiteral:
+			_lexeme = ""; break;
+		case SemiColon: _lexeme = ";"; break;
+		case Equals:    _lexeme = "="; break;
+		case Plus:      _lexeme = "+"; break;
+		case Minus:     _lexeme = "-"; break;
+		case Star:      _lexeme = "*"; break;
+		default: throw std::runtime_error("Unknown default lexeme for type");
 	}
 }
 
-inline const bool Token::is(const std::initializer_list<TokenType>& types) const
+const Token& TokenStream::peek(const int offset) const
 {
-	for (auto type : types)
-		if (_type == type) return true;
-	return false;
-}
-
-inline const std::string& Token::toString() const
-{
-	return tokenTypeToString(_type) + _lexeme == "" ? "" : "(" + _lexeme + ")";
-}
-
-void TokenStream::addToken(Token& token)
-{
-	_tokens.push_back(token);
-}
-
-const Token& TokenStream::peek(const int n) const
-{
-	std::ptrdiff_t peekLoc = static_cast<std::ptrdiff_t>(_current) + n;
-	if (peekLoc < 0 || peekLoc >= static_cast<std::ptrdiff_t>(_tokens.size()))
+	int index = _current + offset;
+	if (index < 0 || index >= _tokens.size())
 		return NULL_TOKEN;
-	return _tokens[peekLoc];
+	return _tokens[index];
 }

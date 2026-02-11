@@ -67,8 +67,8 @@ namespace Parser
 		size_t numTokens = tokens.size();
 		if (numTokens == 0)
 			throw std::runtime_error("token stream is empty");
-		std::shared_ptr<Node> root;
-		std::shared_ptr<Node> currentNode;
+		std::shared_ptr<Node> root = nullptr;
+		std::shared_ptr<Node> currentNode = nullptr;
 		while (tokens.currentPosition() <= numTokens - 2)
 		{
 			const Token& currentToken = tokens.peek(0);
@@ -76,15 +76,15 @@ namespace Parser
 			{
 				if (!tokens.peekType(-1, TokenType::Variable))
 					throw std::runtime_error("can only assign to variables");
-				root = std::make_shared<Node>(NodeType::Assignment, std::move(root));
-				currentNode = std::make_shared<Node>(root);
+				root = std::make_shared<Node>(NodeType::Assignment, root);
+				currentNode = root;
 			}
 			else if (currentToken.is({ TokenType::IntLiteral, TokenType::Variable }))
 			{
 				if (tokens.currentPosition() == 0)
 				{
 					root = std::make_shared<Node>(tokenTypeToNodeType(currentToken.type()), currentToken.lexeme());
-					currentNode = std::make_shared<Node>(root);
+					currentNode = root;
 				}
 				else
 				{
@@ -98,7 +98,7 @@ namespace Parser
 				if (!tokens.currentPosition() == 0)
 					throw std::runtime_error("print keyword must be at the start of its statement");
 				root = std::make_shared<Node>(NodeType::Print);
-				currentNode = std::make_shared<Node>(root);
+				currentNode = root;
 			}
 			else if (currentToken.is(TokenType::Plus))
 			{
@@ -110,8 +110,8 @@ namespace Parser
 				if (nextToken.is({ TokenType::IntLiteral, TokenType::Variable }))
 				{
 					currentNode->setRight(makeAddNode(
-						std::move(currentNode->right()),
-						std::make_shared<Node>(nextToken.type(), std::stoi(nextToken.lexeme()))
+						currentNode->right(),
+						std::make_shared<Node>(tokenTypeToNodeType(nextToken.type()), nextToken.lexeme())
 					));
 					currentNode = currentNode->right();
 				}
@@ -128,8 +128,8 @@ namespace Parser
 				if (nextToken.is({ TokenType::IntLiteral, TokenType::Variable }))
 				{
 					currentNode->setRight(makeSubtractNode(
-						std::move(currentNode->right()),
-						std::make_shared<Node>(nextToken.type(), std::stoi(nextToken.lexeme()))
+						currentNode->right(),
+						std::make_shared<Node>(tokenTypeToNodeType(nextToken.type()), nextToken.lexeme())
 					));
 					currentNode = currentNode->right();
 				}

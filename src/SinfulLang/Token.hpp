@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <format>
 #include <string>
 #include <vector>
 
@@ -23,50 +24,60 @@ enum class TokenType
 	Print,
 };
 
+std::string_view tokenTypeToString(TokenType type);
+
 class Token
 {
 public:
 
-	Token(TokenType type, std::string& lexeme) : _type(type), _lexeme(lexeme) {}
-	Token(TokenType type = TokenType::NullToken) : _type(type) { defaultToken(); }
+	Token(TokenType type, std::string lexeme) : _type(type), _lexeme(std::move(lexeme)) {}
+	explicit Token(TokenType type = TokenType::NullToken);
 
-	const TokenType type() const { return _type; }
+	TokenType type() const { return _type; }
 	const std::string& lexeme() const { return _lexeme; }
 
-	const bool is(const TokenType type) const { return _type == type; }
-	inline const bool is(const std::initializer_list<TokenType>& types) const;
-	inline const std::string& toString() const;
+	bool is(const TokenType type) const { return _type == type; }
+	bool is(std::initializer_list<TokenType> types) const 
+	{
+		for (auto type : types)
+			if (_type == type) return true;
+		return false;
+	}
+
+	std::string toString() const 
+	{ 
+		if (_lexeme.empty()) return std::string(tokenTypeToString(_type));
+		return std::format("{}({})", tokenTypeToString(_type), _lexeme);
+	}
 
 private:
 
 	TokenType _type;
 	std::string _lexeme;
-
-	void defaultToken();
 };
 
-static const Token NULL_TOKEN;
+inline const Token NULL_TOKEN{ TokenType::NullToken, "" };
 
 class TokenStream
 {
 public:
 
-	TokenStream(std::vector<Token>& tokens) : _tokens(tokens), _current(0) {}
+	explicit TokenStream(std::vector<Token> tokens) : _tokens(std::move(tokens)), _current(0) {}
 
-	const size_t size() const { return _tokens.size(); }
-	const size_t currentPosition() const { return _current; }
+	size_t size() const { return _tokens.size(); }
+	size_t currentPosition() const { return _current; }
 
-	void addToken(Token& token);
+	void add(Token& token) { _tokens.push_back(token); }
 
-	const Token& peek(const int n) const;
-	const bool peekType(int n, const TokenType type) const { return peek(n).is(type); }
-	const bool peekType(const int n, const std::initializer_list<TokenType>& types) const { return peek(n).is(types); }
+	const Token& peek(const int offset = 0) const;
+	bool peekType(const int n, const TokenType type) const { return peek(n).is(type); }
+	bool peekType(const int n, std::initializer_list<TokenType> types) const { return peek(n).is(std::move(types)); }
 
-	const Token& next() { return _current >= _tokens.size() - 1 ? NULL_TOKEN : _tokens[++_current]; }
-	const Token& previous() { return _current < 0 ? NULL_TOKEN : _tokens[--_current]; }
+	const Token& next() { return hasNext() ? _tokens[++_current] : NULL_TOKEN; }
+	const Token& previous() { return hasPrevious() ? _tokens[--_current] : NULL_TOKEN; }
 
-	const bool hasNext() const { return _current < _tokens.size() - 1; }
-	const bool hasPrevious() const { return _current > 0; }
+	bool hasNext() const { return _current < _tokens.size() - 1; }
+	bool hasPrevious() const { return _current > 0; }
 
 private:
 
