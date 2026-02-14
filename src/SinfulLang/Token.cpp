@@ -1,10 +1,12 @@
 #include "Token.hpp"
 
-std::string_view tokenTypeToString(TokenType type)
+namespace Sinful::Tokens
 {
-	switch (type)
+	std::string_view tokenTypeToString(TokenType type)
 	{
-		using enum TokenType;
+		switch (type)
+		{
+			using enum TokenType;
 		case NullToken:		return "NullToken";
 		case SemiColon:		return "SemiColon";
 		case Variable:		return "Variable";
@@ -15,14 +17,14 @@ std::string_view tokenTypeToString(TokenType type)
 		case Star:			return "Star";
 		case Print:			return "Print";
 		default:            return "Unknown";
+		}
 	}
-}
 
-Token::Token(TokenType type) : _type(type)
-{
-	switch (type)
+	Token::Token(TokenType type) : _type(type)
 	{
-		using enum TokenType;
+		switch (type)
+		{
+			using enum TokenType;
 		case NullToken: case Print: case Variable: case IntLiteral:
 			_lexeme = ""; break;
 		case SemiColon: _lexeme = ";"; break;
@@ -31,13 +33,14 @@ Token::Token(TokenType type) : _type(type)
 		case Minus:     _lexeme = "-"; break;
 		case Star:      _lexeme = "*"; break;
 		default: throw std::runtime_error("Unknown default lexeme for type");
+		}
 	}
-}
 
-const Token& TokenStream::peek(const int offset) const
-{
-	int index = _current + offset;
-	if (index < 0 || index >= _tokens.size())
-		return NULL_TOKEN;
-	return _tokens[index];
+	const Token& TokenStream::peek(const int offset) const
+	{
+		int index = _current + offset;
+		if (index < 0 || index >= _tokens.size())
+			return NULL_TOKEN;
+		return _tokens[index];
+	}
 }

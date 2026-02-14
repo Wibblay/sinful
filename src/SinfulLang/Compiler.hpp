@@ -12,49 +12,52 @@
 #include "Parser.hpp"
 #include "Token.hpp"
 
-class Compiler
+namespace Sinful
 {
-public:
-	Compiler(std::string inputFile, std::string outputFile) : _inputFile(inputFile), 
-		_outputFile(outputFile) 
+	class Compiler
 	{
-		_generator = new Generator();
-	};
-
-	virtual ~Compiler()
-	{
-		delete _generator;
-	}
-
-	void Compile() const
-	{
-		std::cout << "Compiling..." << std::endl;
-		std::ifstream stream(_inputFile);
-
-		std::string lineBuffer;
-		std::istringstream lineStream;
-		std::vector<std::shared_ptr<Node>> program;
-		while (std::getline(stream, lineBuffer))
+	public:
+		Compiler(std::string inputFile, std::string outputFile) : _inputFile(inputFile),
+			_outputFile(outputFile)
 		{
-			if (lineBuffer.length() == 0)
-				continue;
-			auto tokens = Lexer::tokeniseLine(lineBuffer);
-			std::shared_ptr<Node> tree = Parser::parseTokens(*tokens);
-			program.emplace_back(tree);
+			_generator = new AsmGeneration::Generator();
+		};
+
+		virtual ~Compiler()
+		{
+			delete _generator;
 		}
 
-		for (auto& statement : program)
-			_generator->asmFromStatement(statement);
+		void Compile() const
+		{
+			std::cout << "Compiling..." << std::endl;
+			std::ifstream stream(_inputFile);
 
-		std::ofstream out(_outputFile);
-		if (!out)
-			throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
-		out << _generator->generate();
-	}
+			std::string lineBuffer;
+			std::istringstream lineStream;
+			std::vector<std::unique_ptr<Nodes::Node>> program;
+			while (std::getline(stream, lineBuffer))
+			{
+				if (lineBuffer.length() == 0)
+					continue;
+				auto tokens = Lexer::tokeniseLine(lineBuffer);
+				std::unique_ptr<Nodes::Node> tree = Parser::parseStatement(*tokens);
+				program.emplace_back(std::move(tree));
+			}
 
-private:
+			for (auto& statement : program)
+				_generator->generateStatementAsm(*statement);
 
-	std::string _inputFile;
-	std::string _outputFile;
-	Generator* _generator;
-};
+			std::ofstream out(_outputFile);
+			if (!out)
+				throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
+			out << _generator->generateFinal();
+		}
+
+	private:
+
+		std::string _inputFile;
+		std::string _outputFile;
+		AsmGeneration::Generator* _generator;
+	};
+}

@@ -9,46 +9,62 @@
 #include "SymbolTable.hpp"
 #include "Token.hpp"
 
-class Generator
+namespace Sinful::AsmGeneration
 {
-public:
+    template<class... Ts> struct Visitor : Ts... { using Ts::operator()...; };
+    template<class... Ts> Visitor(Ts...) -> Visitor<Ts...>;
 
-    Generator() : _symbolTable(), _dataSection(), _codeSection() 
-    { 
-        setupStackFrame();
-    }
-    ~Generator() = default;
+    class Generator
+    {
+    public:
 
-    std::string generate();
-    void asmFromStatement(std::shared_ptr<Node> root);  
+        Generator() : _symbolTable(), _dataSection(), _codeSection() { }
+        ~Generator() = default;
 
-private:
-    // -- Low-level Emitters --
-    void emit(const std::string& instr, const std::string& ops = "");
-    void push(const std::string& reg);
-    void pop(const std::string& reg);
-    void mov(const std::string& dest, const std::string& src);
-    void add(const std::string& dest, const std::string& src);
-    void sub(const std::string& dest, const std::string& src);
-    void set0(const std::string& reg);
+        void generateStatementAsm(const Nodes::Node& node);
+        std::string generateFinal();
 
+        // -- Low-level Emitters --
+        void emit(const std::string& instr, const std::string& ops, std::stringstream& target);
+        void emit(const std::string& instr, const std::string& ops = "") { emit(instr, ops, _codeSection); }
 
-    // -- High-level Helpers --
-    void setupStackFrame();
-    void tearDownStackFrame();
-    void generateGlobalData();
-    void generateExpr(const std::shared_ptr<Node> node);
-    void generateExprOperand(const std::shared_ptr<Node> node);
-    void generateAssignment(const std::shared_ptr<Node> node);
-    void generatePrint(const std::shared_ptr<Node> node);
-    void intToString();
-    void getStdOutHandle();
+        void push(const std::string& reg, std::stringstream& target);
+        void push(const std::string& reg) { push(reg, _codeSection); }
 
-    SymbolTable _symbolTable;
-    std::stringstream _dataSection;
-    std::stringstream _codeSection;
-    std::stringstream _stackVars;
-    int _labelCounter = 0;
-    int _stringLiteralCounter = 0;
-    bool _hasStdOutHandle = false;
-};
+        void pop(const std::string& reg, std::stringstream& target);
+        void pop(const std::string& reg) { pop(reg, _codeSection); }
+
+        void mov(const std::string& dest, const std::string& src, std::stringstream& target);
+        void mov(const std::string& dest, const std::string& src) { mov(dest, src, _codeSection); }
+
+        void add(const std::string& dest, const std::string& src, std::stringstream& target);
+        void add(const std::string& dest, const std::string& src) { add(dest, src, _codeSection); }
+
+        void sub(const std::string& dest, const std::string& src, std::stringstream& target);
+        void sub(const std::string& dest, const std::string& src) { sub(dest, src, _codeSection); }
+
+        void set0(const std::string& reg, std::stringstream& target);
+        void set0(const std::string& reg) { set0(reg, _codeSection); }
+
+    private:
+
+        // -- High-level Helpers --
+        void setupStackFrame(std::stringstream& target);
+        void setupStackFrame() { setupStackFrame(_codeSection); }
+
+        void tearDownStackFrame(std::stringstream& target);
+        void tearDownStackFrame() { tearDownStackFrame(_codeSection); }
+
+        void generateGlobalData();
+        void intToString();
+        void getStdOutHandle(std::stringstream& target);
+
+        SymbolTable _symbolTable;
+        std::stringstream _dataSection;
+        std::stringstream _codeSection;
+        std::stringstream _stackVars;
+        int _labelCounter = 0;
+        int _stringLiteralCounter = 0;
+        bool _requiresPrint = false;
+    };
+}

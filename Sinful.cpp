@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 		std::cerr << "File name must end with '.sin'" << std::endl;
 	}
 
-	Compiler compiler("../../../SinfulScripts/" + s, "../../assembly/" + s.substr(0, s.length() - 3) + "asm");
+	Sinful::Compiler compiler("../../../SinfulScripts/" + s, "../../assembly/" + s.substr(0, s.length() - 3) + "asm");
 	compiler.Compile();
 	
 	return EXIT_SUCCESS;
