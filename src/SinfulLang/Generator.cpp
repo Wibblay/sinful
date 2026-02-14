@@ -30,9 +30,8 @@ namespace Sinful::AsmGeneration
             {
                 generateStatementAsm(*n.value); // Evaluate right side into rax
                 if (!_symbolTable.contains(n.name))
-                {
                     _symbolTable.addLocalVariable(n.name);
-                }
+                
                 auto offset = _symbolTable.getStackOffset(n.name);
                 mov("[rbp" + std::to_string(offset) + "]", "rax");
             },
@@ -156,13 +155,19 @@ namespace Sinful::AsmGeneration
         push("rdi", target); // Save non-volatile registers
         push("rbx", target);
 
+        int localsSpace = _symbolTable.getTotalStackSize();
+        int totalSpace = 32 + localsSpace;
+        if (totalSpace % 16 != 0)
+            totalSpace += (16 - (totalSpace % 16));
+
         // Temp: Using fixed size buffer space - will need to calculate to fit locals
-        sub("rsp", "48", target);
+        sub("rsp", std::to_string(totalSpace), target);
+        _lastLocalSpaceReserved = totalSpace;
     }
 
     void Generator::tearDownStackFrame(std::stringstream& target)
     {
-        add("rsp", "48", target); // Remove buffer space
+        add("rsp", std::to_string(_lastLocalSpaceReserved), target); // Remove buffer space
         pop("rbx", target); // Restore non-volatile registers
         pop("rdi", target);
         pop("rbp", target);

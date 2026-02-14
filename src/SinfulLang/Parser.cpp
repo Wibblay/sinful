@@ -35,7 +35,7 @@ namespace Sinful::Parser
 		return left;
 	}
 
-	static std::unique_ptr<Node> parseExpression(TokenStream& tokens)
+	std::unique_ptr<Node> parseExpression(TokenStream& tokens)
 	{
 		auto left = parseTerm(tokens);
 		while (tokens.peek().is({ TokenType::Plus, TokenType::Minus }))

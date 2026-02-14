@@ -1,38 +1,35 @@
 #pragma once
 
 #include <exception>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
-class SymbolTable
+namespace Sinful::Symbols
 {
 	struct Symbol
 	{
 		std::string name;
-		std::string asmName;
 		int stackOffset = 0;
-		bool isConstant = false;
-		bool inRegister = false;
-		std::string registerName;
 	};
 
-public:
-
-	SymbolTable() : _symbols() { }
-
-	void addLocalVariable(const std::string& name);
-	inline int getStackOffset(const std::string& name) const
+	class SymbolTable
 	{
-		if (!_symbols.contains(name))
-			throw std::runtime_error("given name not found in symbol table");
+	public:
 
-		return _symbols.at(name).stackOffset;
-	}
-	bool contains(const std::string& name) const { return _symbols.contains(name); }
+		SymbolTable() = default;
 
-private:
+		const Symbol& addLocalVariable(const std::string& name);
+		std::optional<Symbol> getSymbol(const std::string& name) const;
+		int getStackOffset(const std::string& name) const;
 
-	std::unordered_map<std::string, Symbol> _symbols;
-	int _currentStackOffset = -8;
-};
+		bool contains(const std::string& name) const { return _symbols.contains(name); }
+		int getTotalStackSize() const { return std::abs(_currentStackOffset + 8); }
+
+	private:
+
+		std::unordered_map<std::string, Symbol> _symbols;
+		int _currentStackOffset = -8;
+	};
+}

@@ -27,7 +27,7 @@ namespace Sinful::Parser
 	static std::unique_ptr<Nodes::Node> parseTerm(Tokens::TokenStream& tokens);
 
 	// Level 2: Expressions (Handling + and -)
-	static std::unique_ptr<Nodes::Node> parseExpression(Tokens::TokenStream& tokens);
+	std::unique_ptr<Nodes::Node> parseExpression(Tokens::TokenStream& tokens);
 
 	// Level 1: Statements (Assignment, Print)
 	std::unique_ptr <Nodes::Node > parseStatement(Tokens::TokenStream& tokens);

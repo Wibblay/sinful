@@ -59,12 +59,13 @@ namespace Sinful::AsmGeneration
         void intToString();
         void getStdOutHandle(std::stringstream& target);
 
-        SymbolTable _symbolTable;
+        Symbols::SymbolTable _symbolTable;
         std::stringstream _dataSection;
         std::stringstream _codeSection;
         std::stringstream _stackVars;
         int _labelCounter = 0;
         int _stringLiteralCounter = 0;
         bool _requiresPrint = false;
+        int _lastLocalSpaceReserved = 0;
     };
 }
