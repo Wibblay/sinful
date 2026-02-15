@@ -1,9 +1,6 @@
 #pragma once
 
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <iomanip>
+#include "sinful/pch.hpp"
 
 #include "Node.hpp"
 #include "SymbolTable.hpp"

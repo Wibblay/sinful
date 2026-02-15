@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "SinfulLang/Lexer.hpp"
+#include "Lexer.hpp"
 
 using namespace Sinful::Lexer;
 using namespace Sinful::Tokens;

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "SinfulLang/Parser.hpp"
+#include "Parser.hpp"
 
 using namespace Sinful::Tokens;
 using namespace Sinful::Nodes;

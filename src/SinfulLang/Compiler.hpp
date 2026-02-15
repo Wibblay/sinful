@@ -1,11 +1,6 @@
 #pragma once
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <memory>
-#include <sstream>
-#include <vector>
+#include "sinful/pch.hpp"
 
 #include "Generator.hpp"
 #include "Lexer.hpp"

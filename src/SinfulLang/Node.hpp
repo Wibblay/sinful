@@ -1,12 +1,6 @@
 #pragma once
 
-#include <exception>
-#include <stdexcept>
-#include <functional>
-#include <initializer_list>
-#include <memory>
-#include <string>
-#include <variant>
+#include "sinful/pch.hpp"
 
 #include "Token.hpp"
 

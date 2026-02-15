@@ -1,10 +1,6 @@
 #pragma once
 
-#include <exception>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
+#include "sinful/pch.hpp"
 
 namespace Sinful::Symbols
 {

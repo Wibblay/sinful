@@ -1,5 +1,5 @@
 #include <gtest\gtest.h>
-#include "SinfulLang/Generator.hpp"
+#include "Generator.hpp"
 
 using namespace Sinful::AsmGeneration;
 using namespace Sinful::Nodes;

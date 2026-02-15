@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "SinfulLang/SymbolTable.hpp"
+#include "SymbolTable.hpp"
 
 using namespace Sinful::Symbols;
 

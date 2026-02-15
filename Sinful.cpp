@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <string>
 
-#include "SinfulLang\Compiler.hpp"
+#include "Compiler.hpp"
 
 int main(int argc, char* argv[])
 {

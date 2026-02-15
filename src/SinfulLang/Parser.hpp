@@ -1,13 +1,6 @@
 #pragma once
 
-#include <exception>
-#include <expected>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <unordered_set>
-#include <variant>
-#include <vector>
+#include "sinful//pch.hpp"
 
 #include "Exceptions.hpp"
 #include "Node.hpp"

@@ -1,9 +1,7 @@
 #pragma once
 
-#include <initializer_list>
-#include <format>
-#include <string>
-#include <vector>
+#include "sinful//pch.hpp"
+
 #include "Exceptions.hpp"
 
 namespace Sinful::Tokens
