@@ -2,9 +2,24 @@
 
 using namespace Sinful::Nodes;
 using namespace Sinful::Tokens;
+using namespace Sinful::Exceptions;
 
 namespace Sinful::Parser
 {
+	static void expect(Tokens::TokenStream& tokens, Tokens::TokenType type, std::string msg)
+	{
+		if (!tokens.peek().is(type))
+		{
+			auto& token = tokens.peek();
+			throw CompilerException(Diagnostic{
+				Exceptions::Diagnostic::Level::Error,
+				token.location(),
+				msg + "\nExpected '" + tokenTypeToString(type) + "' but found '" + token.lexeme() + "'"
+			});
+		}
+		tokens.next();
+	}
+
 	static std::unique_ptr<Node> parseFactor(TokenStream& tokens)
 	{
 		auto& t = tokens.peek();
@@ -20,7 +35,11 @@ namespace Sinful::Parser
 			tokens.next();
 			return std::make_unique<Node>(VariableNode{ name });
 		}
-		throw std::runtime_error("Expected literal or variable");
+		throw CompilerException(Diagnostic{
+				Exceptions::Diagnostic::Level::Error,
+				t.location(),
+				"Expected literal or variable but found '" + t.lexeme() + "'"
+		});
 	}
 
 	static std::unique_ptr<Node> parseTerm(TokenStream& tokens)

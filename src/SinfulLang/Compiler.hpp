@@ -28,7 +28,7 @@ namespace Sinful
 			delete _generator;
 		}
 
-		void Compile() const
+		int Compile() const
 		{
 			std::cout << "Compiling..." << std::endl;
 			std::ifstream stream(_inputFile);
@@ -36,22 +36,36 @@ namespace Sinful
 			std::string lineBuffer;
 			std::istringstream lineStream;
 			std::vector<std::unique_ptr<Nodes::Node>> program;
-			while (std::getline(stream, lineBuffer))
+			Exceptions::ErrorReporter errorReporter{};
+			try
 			{
-				if (lineBuffer.length() == 0)
-					continue;
-				auto tokens = Lexer::tokeniseLine(lineBuffer);
-				std::unique_ptr<Nodes::Node> tree = Parser::parseStatement(*tokens);
-				program.emplace_back(std::move(tree));
-			}
+				while (std::getline(stream, lineBuffer))
+				{
+					errorReporter.cacheLine(_inputFile, lineBuffer);
+					auto tokens = Lexer::tokeniseLine(lineBuffer, _inputFile);
+					std::unique_ptr<Nodes::Node> tree = Parser::parseStatement(*tokens);
+					program.emplace_back(std::move(tree));
+				}
 
-			for (auto& statement : program)
-				_generator->generateStatementAsm(*statement);
+				for (auto& statement : program)
+					_generator->generateStatementAsm(*statement);
+			}
+			catch (const Exceptions::CompilerException& e)
+			{
+				errorReporter.handleException(e);
+				return EXIT_FAILURE;
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << "Internal Compiler Error: " << e.what() << "\n";
+				return EXIT_FAILURE;
+			}
 
 			std::ofstream out(_outputFile);
 			if (!out)
 				throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
 			out << _generator->generateFinal();
+			return EXIT_SUCCESS;
 		}
 
 	private:

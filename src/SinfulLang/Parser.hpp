@@ -9,16 +9,13 @@
 #include <variant>
 #include <vector>
 
+#include "Exceptions.hpp"
 #include "Node.hpp"
 #include "Token.hpp"
 
 namespace Sinful::Parser
 {
-	static void expect(Tokens::TokenStream& tokens, Tokens::TokenType type, std::string_view msg)
-	{
-		if (!tokens.peek().is(type)) throw std::runtime_error(msg.data());
-		tokens.next();
-	}
+	static void expect(Tokens::TokenStream& tokens, Tokens::TokenType type, std::string msg);
 
 	// Level 4: Factors
 	static std::unique_ptr<Nodes::Node> parseFactor(Tokens::TokenStream& tokens);

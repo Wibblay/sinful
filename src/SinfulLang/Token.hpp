@@ -4,6 +4,7 @@
 #include <format>
 #include <string>
 #include <vector>
+#include "Exceptions.hpp"
 
 namespace Sinful::Tokens
 {
@@ -26,17 +27,18 @@ namespace Sinful::Tokens
 		Print,
 	};
 
-	std::string_view tokenTypeToString(TokenType type);
+	std::string tokenTypeToString(TokenType type);
 
 	class Token
 	{
 	public:
 
-		Token(TokenType type, std::string lexeme) : _type(type), _lexeme(std::move(lexeme)) {}
-		explicit Token(TokenType type = TokenType::NullToken);
+		Token(TokenType type, std::string lexeme, Exceptions::SourceLocation loc) : _type(type), _lexeme(std::move(lexeme)), _location(loc) {}
+		explicit Token(TokenType type = TokenType::NullToken, Exceptions::SourceLocation loc = {"", 0, 0});
 
 		TokenType type() const { return _type; }
 		const std::string& lexeme() const { return _lexeme; }
+		const Exceptions::SourceLocation& location() const { return _location; }
 
 		bool is(const TokenType type) const { return _type == type; }
 		bool is(std::initializer_list<TokenType> types) const
@@ -56,9 +58,10 @@ namespace Sinful::Tokens
 
 		TokenType _type;
 		std::string _lexeme;
+		Exceptions::SourceLocation _location;
 	};
 
-	inline const Token NULL_TOKEN{ TokenType::NullToken, "" };
+	inline const Token NULL_TOKEN{ TokenType::NullToken, {"", 0, 0} };
 
 	class TokenStream
 	{
@@ -71,13 +74,10 @@ namespace Sinful::Tokens
 
 		void add(Token& token) { _tokens.push_back(token); }
 
-		const Token& peek(const int offset = 0) const;
+		const Token& peek(const size_t offset = 0) const;
 
 		const Token& next() { return hasNext() ? _tokens[++_current] : NULL_TOKEN; }
-		const Token& previous() { return hasPrevious() ? _tokens[--_current] : NULL_TOKEN; }
-
 		bool hasNext() const { return _current < _tokens.size() - 1; }
-		bool hasPrevious() const { return _current > 0; }
 
 	private:
 

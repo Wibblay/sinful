@@ -1,8 +1,10 @@
 #include "Token.hpp"
 
+using namespace Sinful::Exceptions;
+
 namespace Sinful::Tokens
 {
-	std::string_view tokenTypeToString(TokenType type)
+	std::string tokenTypeToString(TokenType type)
 	{
 		switch (type)
 		{
@@ -20,7 +22,7 @@ namespace Sinful::Tokens
 		}
 	}
 
-	Token::Token(TokenType type) : _type(type)
+	Token::Token(TokenType type, SourceLocation loc) : _type(type), _location(loc)
 	{
 		switch (type)
 		{
@@ -36,10 +38,10 @@ namespace Sinful::Tokens
 		}
 	}
 
-	const Token& TokenStream::peek(const int offset) const
+	const Token& TokenStream::peek(const size_t offset) const
 	{
-		int index = _current + offset;
-		if (index < 0 || index >= _tokens.size())
+		size_t index = _current + offset;
+		if (index >= _tokens.size())
 			return NULL_TOKEN;
 		return _tokens[index];
 	}

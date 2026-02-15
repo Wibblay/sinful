@@ -4,17 +4,20 @@
 using namespace Sinful::Tokens;
 using namespace Sinful::Nodes;
 using namespace Sinful::Parser;
+using namespace Sinful::Exceptions;
 
 TEST(ParserTest, RespectsPrecedence)
 {
+    SourceLocation defaultLoc{ "", 0, 0 };
+
     // 5 + 2 * 3;
     std::vector<Token> tokens = {
-        {TokenType::IntLiteral, "5"},
-        {TokenType::Plus, "+"},
-        {TokenType::IntLiteral, "2"},
-        {TokenType::Star, "*"},
-        {TokenType::IntLiteral, "3"},
-        {TokenType::SemiColon, ";"}
+        {TokenType::IntLiteral, "5", defaultLoc},
+        {TokenType::Plus, "+", defaultLoc},
+        {TokenType::IntLiteral, "2", defaultLoc},
+        {TokenType::Star, "*", defaultLoc},
+        {TokenType::IntLiteral, "3", defaultLoc},
+        {TokenType::SemiColon, ";", defaultLoc}
     };
     TokenStream stream(tokens);
     auto root = parseExpression(stream);

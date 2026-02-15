@@ -4,6 +4,19 @@ using namespace Sinful::Tokens;
 
 namespace Sinful::Lexer
 {
+	char Scanner::advance()
+	{
+		char c = source[position++];
+		if (c == '\n')
+		{
+			line++;
+			column = 1;
+		}
+		else
+			column++;
+		return c;
+	}
+
 	static std::string_view consumeWord(Scanner& sc)
 	{
 		size_t start = sc.position;
@@ -22,10 +35,10 @@ namespace Sinful::Lexer
 		return sc.source.substr(start, sc.position - start);
 	}
 
-	std::unique_ptr<TokenStream> tokeniseLine(std::string_view line)
+	std::unique_ptr<TokenStream> tokeniseLine(std::string_view line, std::string filename)
 	{
 		std::vector<Token> tokens;
-		Scanner sc{ line };
+		Scanner sc{ line, filename };
 
 		while (!sc.atEnd())
 		{
@@ -36,26 +49,29 @@ namespace Sinful::Lexer
 			else if (std::isdigit(c))
 			{
 				auto val = consumeNumeric(sc);
-				tokens.emplace_back(TokenType::IntLiteral, std::string(val));
+				auto loc = sc.currentLoc();
+				tokens.emplace_back(TokenType::IntLiteral, std::string(val), loc);
 			}
 			else if (std::isalpha(c))
 			{
 				auto val = consumeWord(sc);
+				auto loc = sc.currentLoc();
 				if (val == "print")
-					tokens.emplace_back(TokenType::Print);
+					tokens.emplace_back(TokenType::Print, loc);
 				else
-					tokens.emplace_back(TokenType::Variable, std::string(val));
+					tokens.emplace_back(TokenType::Variable, std::string(val), loc);
 			}
 			else
 			{
 				sc.advance();
+				auto loc = sc.currentLoc();
 				switch (c)
 				{
-				case '+': tokens.emplace_back(TokenType::Plus); break;
-				case '-': tokens.emplace_back(TokenType::Minus); break;
-				case '*': tokens.emplace_back(TokenType::Star); break;
-				case ';': tokens.emplace_back(TokenType::SemiColon); break;
-				case '=': tokens.emplace_back(TokenType::Equals); break;
+				case '+': tokens.emplace_back(TokenType::Plus, loc); break;
+				case '-': tokens.emplace_back(TokenType::Minus, loc); break;
+				case '*': tokens.emplace_back(TokenType::Star, loc); break;
+				case ';': tokens.emplace_back(TokenType::SemiColon, loc); break;
+				case '=': tokens.emplace_back(TokenType::Equals, loc); break;
 				default:  throw std::runtime_error("Unrecognised character");
 				}
 			}

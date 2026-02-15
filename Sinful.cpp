@@ -20,7 +20,5 @@ int main(int argc, char* argv[])
 	}
 
 	Sinful::Compiler compiler("../../../SinfulScripts/" + s, "../../assembly/" + s.substr(0, s.length() - 3) + "asm");
-	compiler.Compile();
-	
-	return EXIT_SUCCESS;
+	return compiler.Compile();
 }
