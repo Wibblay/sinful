@@ -10,11 +10,16 @@ namespace Sinful::Lexer
 		if (c == '\n')
 		{
 			line++;
-			column = 1;
+			position = 0;
 		}
-		else
-			column++;
 		return c;
+	}
+
+	void Scanner::newLine(std::string_view newLine)
+	{
+		source = newLine;
+		line++;
+		position = 0;
 	}
 
 	static std::string_view consumeWord(Scanner& sc)
@@ -35,10 +40,9 @@ namespace Sinful::Lexer
 		return sc.source.substr(start, sc.position - start);
 	}
 
-	std::unique_ptr<TokenStream> tokeniseLine(std::string_view line, std::string filename)
+	std::unique_ptr<TokenStream> tokeniseLine(Scanner& sc)
 	{
 		std::vector<Token> tokens;
-		Scanner sc{ line, filename };
 
 		while (!sc.atEnd())
 		{
@@ -65,14 +69,27 @@ namespace Sinful::Lexer
 			{
 				sc.advance();
 				auto loc = sc.currentLoc();
-				switch (c)
+				if (c == '/')
 				{
-				case '+': tokens.emplace_back(TokenType::Plus, loc); break;
-				case '-': tokens.emplace_back(TokenType::Minus, loc); break;
-				case '*': tokens.emplace_back(TokenType::Star, loc); break;
-				case ';': tokens.emplace_back(TokenType::SemiColon, loc); break;
-				case '=': tokens.emplace_back(TokenType::Equals, loc); break;
-				default:  throw std::runtime_error("Unrecognised character");
+					char c2 = sc.peek();
+					if (c2 == '/')
+						break;
+					else
+						tokens.emplace_back(TokenType::FSlash, loc);
+				}
+				else
+				{
+					switch (c)
+					{
+					case '=': tokens.emplace_back(TokenType::Equals, loc); break;
+					case '+': tokens.emplace_back(TokenType::Plus, loc); break;
+					case '-': tokens.emplace_back(TokenType::Minus, loc); break;
+					case '*': tokens.emplace_back(TokenType::Star, loc); break;
+					case ';': tokens.emplace_back(TokenType::SemiColon, loc); break;
+					case '(': tokens.emplace_back(TokenType::LBracket, loc); break;
+					case ')': tokens.emplace_back(TokenType::RBracket, loc); break;
+					default:  throw std::runtime_error("Unrecognised character");
+					}
 				}
 			}
 		}

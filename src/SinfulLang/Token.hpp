@@ -9,8 +9,7 @@ namespace Sinful::Tokens
 	enum class TokenType
 	{
 		NullToken,
-		SemiColon,
-
+		
 		// Data
 		Variable,
 		IntLiteral,
@@ -20,6 +19,12 @@ namespace Sinful::Tokens
 		Plus,
 		Minus,
 		Star,
+		FSlash,
+
+		// Syntactic
+		SemiColon,
+		LBracket,
+		RBracket,
 
 		// Keywords
 		Print,

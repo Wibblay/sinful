@@ -34,10 +34,12 @@ namespace Sinful
 			Exceptions::ErrorReporter errorReporter{};
 			try
 			{
+				Lexer::Scanner sc{ _inputFile };
 				while (std::getline(stream, lineBuffer))
 				{
 					errorReporter.cacheLine(_inputFile, lineBuffer);
-					auto tokens = Lexer::tokeniseLine(lineBuffer, _inputFile);
+					sc.newLine(lineBuffer);
+					auto tokens = Lexer::tokeniseLine(sc);
 					std::unique_ptr<Nodes::Node> tree = Parser::parseStatement(*tokens);
 					program.emplace_back(std::move(tree));
 				}

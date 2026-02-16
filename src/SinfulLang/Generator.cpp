@@ -21,10 +21,15 @@ namespace Sinful::AsmGeneration
                 generateStatementAsm(*n.right); // Evaluate right into rax and move to rbx
                 mov("rbx", "rax");
 
-                pop("rax"); // Pop left and operate
+                pop("rax"); // Pop left and operate (result in rax)
                 if (n.op == "+") add("rax", "rbx");
                 else if (n.op == "-") sub("rax", "rbx");
                 else if (n.op == "*") emit("imul", "rax, rbx");
+                else if (n.op == "/")
+                {
+                    set0("rdx");
+                    emit("idiv", "rbx");
+                }
             },
             [&](const Assignment& n)
             {

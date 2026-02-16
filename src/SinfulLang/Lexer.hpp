@@ -8,15 +8,15 @@ namespace Sinful::Lexer
 {
 	struct Scanner
 	{
-		std::string_view source;
 		std::string fileName;
+		std::string_view source = "";
+		size_t line = -1;
 		size_t position = 0;
-		size_t line = 1;
-		size_t column = 1;
 
 		char peek() const { return position < source.length() ? source[position] : '\0'; }
 		char advance();
-		Exceptions::SourceLocation currentLoc() const { return { fileName, line, column }; }
+		Exceptions::SourceLocation currentLoc() const { return { fileName, line, position }; }
+		void newLine(std::string_view newLine);
 		bool atEnd() const { return position >= source.length(); }
 	};
 
@@ -24,5 +24,5 @@ namespace Sinful::Lexer
 
 	static std::string_view consumeNumeric(Scanner& sc);
 
-	std::unique_ptr<Tokens::TokenStream> tokeniseLine(std::string_view line, std::string filename);
+	std::unique_ptr<Tokens::TokenStream> tokeniseLine(Scanner& sc);
 }

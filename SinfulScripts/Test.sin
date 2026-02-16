@@ -1,3 +1,3 @@
-test = 5;
-test2 = 6
-print test * test2;
+test = 60; // aohwije +
+test2 = 3;
+print test / (test2 + test2);

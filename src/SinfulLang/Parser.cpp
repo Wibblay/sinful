@@ -35,6 +35,20 @@ namespace Sinful::Parser
 			tokens.next();
 			return std::make_unique<Node>(VariableNode{ name });
 		}
+		if (t.is(TokenType::LBracket))
+		{
+			tokens.next();
+			auto bracketExpr = parseExpression(tokens);
+			auto& t2 = tokens.peek();
+			if (!t2.is(TokenType::RBracket))
+				throw CompilerException(Diagnostic{
+					Exceptions::Diagnostic::Level::Error,
+					t2.location(),
+					"Unclosed parentheses"
+				});
+			tokens.next();
+			return bracketExpr;
+		}
 		throw CompilerException(Diagnostic{
 				Exceptions::Diagnostic::Level::Error,
 				t.location(),
@@ -45,11 +59,12 @@ namespace Sinful::Parser
 	static std::unique_ptr<Node> parseTerm(TokenStream& tokens)
 	{
 		auto left = parseFactor(tokens);
-		while (tokens.peek().is(TokenType::Star))
+		while (tokens.peek().is({ TokenType::Star, TokenType::FSlash }))
 		{
+			std::string op = tokens.peek().lexeme();
 			tokens.next();
 			auto right = parseFactor(tokens);
-			left = std::make_unique<Node>(BinaryExpr{ "*", std::move(left), std::move(right) });
+			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) });
 		}
 		return left;
 	}
