@@ -30,20 +30,19 @@ namespace Sinful
 
 			std::string lineBuffer;
 			std::istringstream lineStream;
-			std::vector<std::unique_ptr<Nodes::Node>> program;
 			Exceptions::ErrorReporter errorReporter{};
 			try
 			{
 				Lexer::Scanner sc{ _inputFile };
+				Tokens::TokenStream tokenised{};
 				while (std::getline(stream, lineBuffer))
 				{
 					errorReporter.cacheLine(_inputFile, lineBuffer);
 					sc.newLine(lineBuffer);
-					auto tokens = Lexer::tokeniseLine(sc);
-					std::unique_ptr<Nodes::Node> tree = Parser::parseStatement(*tokens);
-					program.emplace_back(std::move(tree));
+					Lexer::tokeniseLine(sc, tokenised);
 				}
 
+				auto program = Parser::parseProgram(tokenised);
 				for (auto& statement : program)
 					_generator->generateStatementAsm(*statement);
 			}

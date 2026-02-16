@@ -17,10 +17,13 @@ namespace Sinful::Tokens
 		case Minus:			return "Minus";
 		case Star:			return "Star";
 		case FSlash:		return "ForwardSlash";
+		case I32Type:		return "i32";
 		case SemiColon:		return "SemiColon";
 		case LBracket:		return "LeftBracket";
 		case RBracket:		return "RightBracket";
-		case Print:			return "Print";
+		case LBrace:		return "LeftBrace";
+		case RBrace:		return "RightBrace";
+		case Print:			return "print";
 		default:            return "Unknown";
 		}
 	}
@@ -31,6 +34,7 @@ namespace Sinful::Tokens
 		{
 			using enum TokenType;
 		case NullToken: case Print: case Variable: case IntLiteral:
+		case I32Type:
 			_lexeme = ""; break;
 		case Equals:		_lexeme = "="; break;
 		case Plus:			_lexeme = "+"; break;
@@ -40,6 +44,8 @@ namespace Sinful::Tokens
 		case SemiColon:		_lexeme = ";"; break;
 		case LBracket:		_lexeme = "("; break;
 		case RBracket:		_lexeme = ")"; break;
+		case LBrace:		_lexeme = "{"; break;
+		case RBrace:		_lexeme = "}"; break;
 		default: throw std::runtime_error("Unknown default lexeme for type");
 		}
 	}

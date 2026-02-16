@@ -21,10 +21,15 @@ namespace Sinful::Tokens
 		Star,
 		FSlash,
 
+		// Types
+		I32Type,
+
 		// Syntactic
 		SemiColon,
 		LBracket,
 		RBracket,
+		LBrace,
+		RBrace,
 
 		// Keywords
 		Print,
@@ -37,7 +42,7 @@ namespace Sinful::Tokens
 	public:
 
 		Token(TokenType type, std::string lexeme, Exceptions::SourceLocation loc) : _type(type), _lexeme(std::move(lexeme)), _location(loc) {}
-		explicit Token(TokenType type = TokenType::NullToken, Exceptions::SourceLocation loc = {"", 0, 0});
+		Token(TokenType type = TokenType::NullToken, Exceptions::SourceLocation loc = {"", 0, 0});
 
 		TokenType type() const { return _type; }
 		const std::string& lexeme() const { return _lexeme; }
@@ -70,12 +75,13 @@ namespace Sinful::Tokens
 	{
 	public:
 
+		TokenStream() : _tokens({}), _current(0) {}
 		explicit TokenStream(std::vector<Token> tokens) : _tokens(std::move(tokens)), _current(0) {}
 
 		size_t size() const { return _tokens.size(); }
 		size_t currentPosition() const { return _current; }
 
-		void add(Token& token) { _tokens.push_back(token); }
+		void add(Token token) { _tokens.push_back(std::move(token)); }
 
 		const Token& peek(const size_t offset = 0) const;
 

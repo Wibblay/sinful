@@ -2,6 +2,7 @@
 
 #include "sinful/pch.hpp"
 
+#include "Exceptions.hpp"
 #include "Token.hpp"
 
 namespace Sinful::Nodes
@@ -11,6 +12,7 @@ namespace Sinful::Nodes
 	struct LiteralNode { int value; };
 	struct VariableNode { std::string name; };
 	struct BinaryExpr { std::string op; std::unique_ptr<Node> left; std::unique_ptr<Node> right; };
+	struct Declaration { std::string name; Exceptions::SourceLocation location; };
 	struct Assignment { std::string name; std::unique_ptr<Node> value; };
 	struct PrintStmt { std::unique_ptr<Node> value; };
 
@@ -18,6 +20,7 @@ namespace Sinful::Nodes
 		LiteralNode,
 		VariableNode,
 		BinaryExpr,
+		Declaration,
 		Assignment,
 		PrintStmt
 	>;

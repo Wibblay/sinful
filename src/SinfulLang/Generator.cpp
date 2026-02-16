@@ -1,5 +1,6 @@
 #include "Generator.hpp"
 
+using namespace Sinful::Exceptions;
 using namespace Sinful::Nodes;
 
 namespace Sinful::AsmGeneration
@@ -30,6 +31,16 @@ namespace Sinful::AsmGeneration
                     set0("rdx");
                     emit("idiv", "rbx");
                 }
+            },
+            [&](const Declaration& n) 
+            { 
+                if (_symbolTable.contains(n.name))
+                    throw CompilerException(Diagnostic{
+                        Exceptions::Diagnostic::Level::Error,
+                        n.location,
+                        "Variable " + n.name + " has already been declared in this scope"
+                    });
+                _symbolTable.addLocalVariable(n.name);
             },
             [&](const Assignment& n)
             {

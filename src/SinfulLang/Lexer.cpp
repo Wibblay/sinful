@@ -40,10 +40,8 @@ namespace Sinful::Lexer
 		return sc.source.substr(start, sc.position - start);
 	}
 
-	std::unique_ptr<TokenStream> tokeniseLine(Scanner& sc)
+	void tokeniseLine(Scanner& sc, TokenStream& tokens)
 	{
-		std::vector<Token> tokens;
-
 		while (!sc.atEnd())
 		{
 			char c = sc.peek();
@@ -54,16 +52,18 @@ namespace Sinful::Lexer
 			{
 				auto val = consumeNumeric(sc);
 				auto loc = sc.currentLoc();
-				tokens.emplace_back(TokenType::IntLiteral, std::string(val), loc);
+				tokens.add({ TokenType::IntLiteral, std::string(val), loc });
 			}
 			else if (std::isalpha(c))
 			{
 				auto val = consumeWord(sc);
 				auto loc = sc.currentLoc();
 				if (val == "print")
-					tokens.emplace_back(TokenType::Print, loc);
+					tokens.add({ TokenType::Print, loc });
+				else if (val == "int")
+					tokens.add({ TokenType::I32Type, loc });
 				else
-					tokens.emplace_back(TokenType::Variable, std::string(val), loc);
+					tokens.add({ TokenType::Variable, std::string(val), loc });
 			}
 			else
 			{
@@ -75,25 +75,23 @@ namespace Sinful::Lexer
 					if (c2 == '/')
 						break;
 					else
-						tokens.emplace_back(TokenType::FSlash, loc);
+						tokens.add({ TokenType::FSlash, loc });
 				}
 				else
 				{
 					switch (c)
 					{
-					case '=': tokens.emplace_back(TokenType::Equals, loc); break;
-					case '+': tokens.emplace_back(TokenType::Plus, loc); break;
-					case '-': tokens.emplace_back(TokenType::Minus, loc); break;
-					case '*': tokens.emplace_back(TokenType::Star, loc); break;
-					case ';': tokens.emplace_back(TokenType::SemiColon, loc); break;
-					case '(': tokens.emplace_back(TokenType::LBracket, loc); break;
-					case ')': tokens.emplace_back(TokenType::RBracket, loc); break;
+					case '=': tokens.add({ TokenType::Equals, loc }); break;
+					case '+': tokens.add({ TokenType::Plus, loc }); break;
+					case '-': tokens.add({ TokenType::Minus, loc }); break;
+					case '*': tokens.add({ TokenType::Star, loc }); break;
+					case ';': tokens.add({ TokenType::SemiColon, loc }); break;
+					case '(': tokens.add({ TokenType::LBracket, loc }); break;
+					case ')': tokens.add({ TokenType::RBracket, loc }); break;
 					default:  throw std::runtime_error("Unrecognised character");
 					}
 				}
 			}
 		}
-
-		return std::make_unique<TokenStream>(std::move(tokens));
 	}
 }

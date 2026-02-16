@@ -2,6 +2,7 @@
 
 #include "sinful/pch.hpp"
 
+#include "Exceptions.hpp"
 #include "Node.hpp"
 #include "SymbolTable.hpp"
 #include "Token.hpp"

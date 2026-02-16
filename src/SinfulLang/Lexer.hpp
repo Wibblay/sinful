@@ -10,12 +10,12 @@ namespace Sinful::Lexer
 	{
 		std::string fileName;
 		std::string_view source = "";
-		size_t line = -1;
-		size_t position = 0;
+		size_t line{};
+		size_t position{};
 
 		char peek() const { return position < source.length() ? source[position] : '\0'; }
 		char advance();
-		Exceptions::SourceLocation currentLoc() const { return { fileName, line, position }; }
+		Exceptions::SourceLocation currentLoc() const { return { fileName, line - 1, position }; }
 		void newLine(std::string_view newLine);
 		bool atEnd() const { return position >= source.length(); }
 	};
@@ -24,5 +24,5 @@ namespace Sinful::Lexer
 
 	static std::string_view consumeNumeric(Scanner& sc);
 
-	std::unique_ptr<Tokens::TokenStream> tokeniseLine(Scanner& sc);
+	void tokeniseLine(Scanner& sc, Tokens::TokenStream& tokens);
 }
