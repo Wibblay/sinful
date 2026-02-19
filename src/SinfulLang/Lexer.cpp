@@ -35,8 +35,11 @@ namespace Sinful::Lexer
 		size_t start = sc.position;
 		while (std::isdigit(sc.peek())) sc.advance();
 
-		if (std::isalpha(sc.peek()))
-			throw std::runtime_error("Variable name cannot start with numeric value");
+		if (std::isalpha(sc.peek())) throw CompilerException(Diagnostic{
+			Exceptions::Diagnostic::Level::Error,
+			sc.currentLoc(),
+			"Variable name cannot start with numeric value"
+		});
 
 		return sc.source.substr(start, sc.position - start);
 	}

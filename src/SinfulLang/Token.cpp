@@ -46,7 +46,12 @@ namespace Sinful::Tokens
 		case RBracket:		_lexeme = ")"; break;
 		case LBrace:		_lexeme = "{"; break;
 		case RBrace:		_lexeme = "}"; break;
-		default: throw std::runtime_error("Unknown default lexeme for type");
+		default: 
+			throw CompilerException(Diagnostic{
+				Exceptions::Diagnostic::Level::Error,
+				loc,
+				"Unknown default lexeme for type " + tokenTypeToString(type)
+			});
 		}
 	}
 
