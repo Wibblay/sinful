@@ -5,7 +5,8 @@ using namespace Sinful::Symbols;
 
 TEST(SymbolTableTest, ManagesOffsets)
 {
-    SymbolTable table;
+    SymbolTableManager manager{};
+    SymbolTable table{ &manager };
 
     auto& sym1 = table.addLocalVariable("a");
     EXPECT_EQ(sym1.stackOffset, -8);
@@ -18,7 +19,8 @@ TEST(SymbolTableTest, ManagesOffsets)
 
 TEST(SymbolTableTest, DetectsRedefinition)
 {
-    SymbolTable table;
+    SymbolTableManager manager{};
+    SymbolTable table{ &manager };
     table.addLocalVariable("x");
     EXPECT_THROW(table.addLocalVariable("x"), std::runtime_error);
 }

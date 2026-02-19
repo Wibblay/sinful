@@ -6,58 +6,90 @@ using namespace Sinful::Exceptions;
 
 namespace Sinful::Parser
 {
-	std::vector<std::unique_ptr<Node>> parseProgram(Tokens::TokenStream& tokens)
+	std::unique_ptr<Node> parseProgram(TokenStream& tokens)
 	{
 		std::vector<std::unique_ptr<Node>> program{};
 		while (tokens.hasNext())
 			program.emplace_back(parseStatement(tokens));
 
-		return program;
+		return std::make_unique<Node>(ScopeNode{ std::move(program) });
 	}
 
-	std::unique_ptr <Nodes::Node > parseStatement(Tokens::TokenStream& tokens)
+	std::unique_ptr<Node> parseBlock(TokenStream& tokens)
 	{
-		if (tokens.peek().is(Tokens::TokenType::Print))
+		std::vector<std::unique_ptr<Node>> nodes{};
+		while (!tokens.peek().is(TokenType::RBrace))
+			nodes.emplace_back(parseStatement(tokens));
+		expect(tokens, TokenType::RBrace, "Unclosed scope");
+		return std::make_unique<Node>(ScopeNode{ std::move(nodes) });
+	}
+
+	std::unique_ptr<Node> parseStatement(TokenStream& tokens)
+	{
+		if (tokens.peek().is(TokenType::LBrace))
+		{
+			auto& openingToken = tokens.next();
+			std::vector<std::unique_ptr<Node>> scopedStatements;
+			while (!tokens.peek().is(TokenType::RBrace))
+			{
+				auto stmt = parseStatement(tokens);
+				scopedStatements.emplace_back(std::move(stmt));
+				if (!tokens.hasNext())
+					throw CompilerException(Diagnostic{
+						Exceptions::Diagnostic::Level::Error,
+						openingToken.location(),
+						"Unclosed scope"
+					});
+			}
+			tokens.next();
+			return std::make_unique<Node>(ScopeNode{ std::move(scopedStatements) });
+		}
+
+		if (tokens.peek().is(TokenType::Print))
 		{
 			tokens.next();
 			auto expr = parseExpression(tokens);
-			expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after print");
-			return std::make_unique<Nodes::Node>(Nodes::PrintStmt{ std::move(expr) });
+			expect(tokens, TokenType::SemiColon, "Missing semicolon after print");
+			return std::make_unique<Node>(PrintStmt{ std::move(expr) });
 		}
 
-		if (tokens.peek().is(Tokens::TokenType::I32Type))
+		if (tokens.peek().is(TokenType::I32Type))
 		{
 			tokens.next();
-			if (tokens.peek().is(Tokens::TokenType::Variable) && tokens.peek(1).is(Tokens::TokenType::Equals))
+			if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
 			{
 				std::string name = tokens.peek().lexeme();
 				tokens.next(); // var
 				tokens.next(); // =
 				auto expr = parseExpression(tokens);
 				expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after assignment");
-				return std::make_unique<Nodes::Node>(Nodes::Assignment{ name, std::move(expr) });
+				return std::make_unique<Node>(Assignment{ name, std::move(expr) });
 			}
-			else if (tokens.peek().is(Tokens::TokenType::Variable))
+			else if (tokens.peek().is(TokenType::Variable))
 			{
 				std::string name = tokens.peek().lexeme();
 				SourceLocation loc = tokens.peek().location();
 				tokens.next();
-				expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after declaration");
-				return std::make_unique<Nodes::Node>(Nodes::Declaration{ name, loc });
+				expect(tokens, TokenType::SemiColon, "Missing semicolon after declaration");
+				return std::make_unique<Node>(Declaration{ name, loc });
 			}
 		}
 
-		if (tokens.peek().is(Tokens::TokenType::Variable) && tokens.peek(1).is(Tokens::TokenType::Equals))
+		if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
 		{
 			std::string name = tokens.peek().lexeme();
 			tokens.next(); // var
 			tokens.next(); // =
 			auto expr = parseExpression(tokens);
 			expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after assignment");
-			return std::make_unique<Nodes::Node>(Nodes::Assignment{ name, std::move(expr) });
+			return std::make_unique<Node>(Assignment{ name, std::move(expr) });
 		}
 
-		throw std::runtime_error("Invalid statement");
+		throw CompilerException(Diagnostic{
+			Exceptions::Diagnostic::Level::Error,
+			tokens.peek().location(),
+			"Statement does not conform to recognised pattern"
+		});
 	}
 
 	std::unique_ptr<Node> parseExpression(TokenStream& tokens)
@@ -99,7 +131,7 @@ namespace Sinful::Parser
 		{
 			std::string name = t.lexeme();
 			tokens.next();
-			return std::make_unique<Node>(VariableNode{ name });
+			return std::make_unique<Node>(VariableNode{ name, t.location() });
 		}
 		if (t.is(TokenType::LBracket))
 		{

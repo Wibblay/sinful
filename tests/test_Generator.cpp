@@ -13,7 +13,7 @@ TEST(GeneratorTest, GeneratesCorrectMathAsm)
     auto bin = std::make_unique<Node>(BinaryExpr{ "+", std::move(left), std::move(right) });
     auto assign = std::make_unique<Node>(Assignment{ "x", std::move(bin) });
 
-    gen.generateStatementAsm(*assign);
+    gen.traverseAsmGenerator(*assign);
     std::string result = gen.generateFinal();
 
     // Check for key components in the string

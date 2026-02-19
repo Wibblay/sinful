@@ -43,8 +43,7 @@ namespace Sinful
 				}
 
 				auto program = Parser::parseProgram(tokenised);
-				for (auto& statement : program)
-					_generator->generateStatementAsm(*statement);
+				_generator->traverseAsmGenerator(*program);
 			}
 			catch (const Exceptions::CompilerException& e)
 			{

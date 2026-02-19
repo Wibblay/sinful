@@ -9,17 +9,17 @@
 
 namespace Sinful::AsmGeneration
 {
-    template<class... Ts> struct Visitor : Ts... { using Ts::operator()...; };
-    template<class... Ts> Visitor(Ts...) -> Visitor<Ts...>;
+    template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };
+    template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
     class Generator
     {
     public:
 
-        Generator() : _symbolTable(), _dataSection(), _codeSection() { }
+        Generator() : _symbolTable(), _dataSection(), _codeSection() {}
         ~Generator() = default;
 
-        void generateStatementAsm(const Nodes::Node& node);
+        void traverseAsmGenerator(const Nodes::Node& node);
         std::string generateFinal();
 
         // -- Low-level Emitters --
@@ -57,7 +57,7 @@ namespace Sinful::AsmGeneration
         void intToString();
         void getStdOutHandle(std::stringstream& target);
 
-        Symbols::SymbolTable _symbolTable;
+        Symbols::SymbolTableManager _symbolTable;
         std::stringstream _dataSection;
         std::stringstream _codeSection;
         std::stringstream _stackVars;

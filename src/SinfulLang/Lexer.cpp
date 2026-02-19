@@ -1,5 +1,6 @@
 #include "Lexer.hpp"
 
+using namespace Sinful::Exceptions;
 using namespace Sinful::Tokens;
 
 namespace Sinful::Lexer
@@ -88,7 +89,14 @@ namespace Sinful::Lexer
 					case ';': tokens.add({ TokenType::SemiColon, loc }); break;
 					case '(': tokens.add({ TokenType::LBracket, loc }); break;
 					case ')': tokens.add({ TokenType::RBracket, loc }); break;
-					default:  throw std::runtime_error("Unrecognised character");
+					case '{': tokens.add({ TokenType::LBrace, loc }); break;
+					case '}': tokens.add({ TokenType::RBrace, loc }); break;
+					default:
+						throw CompilerException(Diagnostic{
+							Exceptions::Diagnostic::Level::Error,
+							loc,
+							std::string("Unrecognised character encountered while lexing: ") + c
+							});
 					}
 				}
 			}

@@ -28,6 +28,7 @@ namespace Sinful::Exceptions
 
         const Diagnostic& diagnostic() const { return _diag; }
         const char* what() const noexcept override { return _diag.message.c_str(); }
+        void setLocation(SourceLocation location) { _diag.location = location; }
 
     private:
 
@@ -51,7 +52,7 @@ namespace Sinful::Exceptions
             const auto& loc = diag.location;
 
             // Print header: file.sin:12:5: error: message
-            fprintf(stderr, "%s:%zu:%zu: \033[1;31merror:\033[0;1m %s\033[0m\n",
+            fprintf(stderr, "%s: line %zu: col %zu: \033[1;31merror:\033[0;1m %s\033[0m\n",
                 loc.filename.c_str(), loc.line, loc.column, diag.message.c_str());
 
             // Print the source line and the "caret" (^)

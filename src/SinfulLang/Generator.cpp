@@ -2,24 +2,33 @@
 
 using namespace Sinful::Exceptions;
 using namespace Sinful::Nodes;
+using namespace Sinful::Symbols;
 
 namespace Sinful::AsmGeneration
 {
-    void Generator::generateStatementAsm(const Node& node)
+    void Generator::traverseAsmGenerator(const Node& node)
     {
-        std::visit(Visitor{
+        std::visit(Overloaded{
             [&](const LiteralNode& n) { mov("rax", std::to_string(n.value)); },
             [&](const VariableNode& n)
             {
-                auto offset = _symbolTable.getStackOffset(n.name);
-                mov("rax", "[rbp" + std::to_string(offset) + "]");
+                try
+                {
+                    auto offset = _symbolTable.currentTable->getStackOffsetInitialised(n.name);
+                    mov("rax", "[rbp" + std::to_string(offset) + "]");
+                }
+                catch (CompilerException e)
+                {
+                    e.setLocation(n.location);
+                    throw e;
+                }
             },
             [&](const BinaryExpr& n)
             {
-                generateStatementAsm(*n.left); // Evaluate left into rax and push
+                traverseAsmGenerator(*n.left); // Evaluate left into rax and push
                 push("rax");
 
-                generateStatementAsm(*n.right); // Evaluate right into rax and move to rbx
+                traverseAsmGenerator(*n.right); // Evaluate right into rax and move to rbx
                 mov("rbx", "rax");
 
                 pop("rax"); // Pop left and operate (result in rax)
@@ -34,27 +43,29 @@ namespace Sinful::AsmGeneration
             },
             [&](const Declaration& n) 
             { 
-                if (_symbolTable.contains(n.name))
-                    throw CompilerException(Diagnostic{
-                        Exceptions::Diagnostic::Level::Error,
-                        n.location,
-                        "Variable " + n.name + " has already been declared in this scope"
-                    });
-                _symbolTable.addLocalVariable(n.name);
+                try
+                {
+                    _symbolTable.currentTable->addLocalVariable(n.name);
+                }
+                catch (CompilerException e)
+                {
+                    e.setLocation(n.location);
+                    throw e;
+                }
             },
             [&](const Assignment& n)
             {
-                generateStatementAsm(*n.value); // Evaluate right side into rax
-                if (!_symbolTable.contains(n.name))
-                    _symbolTable.addLocalVariable(n.name);
+                traverseAsmGenerator(*n.value); // Evaluate right side into rax
+                if (!_symbolTable.currentTable->contains(n.name))
+                    _symbolTable.currentTable->addLocalVariable(n.name, true);
                 
-                auto offset = _symbolTable.getStackOffset(n.name);
+                auto offset = _symbolTable.currentTable->getStackOffset(n.name);
                 mov("[rbp" + std::to_string(offset) + "]", "rax");
             },
             [&](const PrintStmt& n)
             {
                 _requiresPrint = true;
-                generateStatementAsm(*n.value); // Evaluate expr into rax
+                traverseAsmGenerator(*n.value); // Evaluate expr into rax
                 intToString();      // Convert rax to string in buffer
                 
                 // Setup Windows API call (WriteConsoleA)
@@ -66,6 +77,12 @@ namespace Sinful::AsmGeneration
 
                 // Shadow space is already reserved in main's prologue
                 emit("call", "WriteConsoleA");
+            },
+            [&](const ScopeNode& n)
+            {
+                SymbolTable scopeSymbols{ &_symbolTable };
+                for (auto& node : n.statements)
+                    traverseAsmGenerator(*node);
             }
         }, node.data);
     }
