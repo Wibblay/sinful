@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "SymbolTable.hpp"
 
+using namespace Sinful::Exceptions;
 using namespace Sinful::Symbols;
 
 TEST(SymbolTableTest, ManagesOffsets)
@@ -22,5 +23,5 @@ TEST(SymbolTableTest, DetectsRedefinition)
     SymbolTableManager manager{};
     SymbolTable table{ &manager };
     table.addLocalVariable("x");
-    EXPECT_THROW(table.addLocalVariable("x"), std::runtime_error);
+    EXPECT_THROW(table.addLocalVariable("x"), CompilerException);
 }

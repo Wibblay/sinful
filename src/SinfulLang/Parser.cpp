@@ -28,20 +28,16 @@ namespace Sinful::Parser
 	{
 		if (tokens.peek().is(TokenType::LBrace))
 		{
-			auto& openingToken = tokens.next();
+			tokens.next();
 			std::vector<std::unique_ptr<Node>> scopedStatements;
 			while (!tokens.peek().is(TokenType::RBrace))
 			{
 				auto stmt = parseStatement(tokens);
 				scopedStatements.emplace_back(std::move(stmt));
 				if (!tokens.hasNext())
-					throw CompilerException(Diagnostic{
-						Exceptions::Diagnostic::Level::Error,
-						openingToken.location(),
-						"Unclosed scope"
-					});
+					break;
 			}
-			tokens.next();
+			expect(tokens, TokenType::RBrace, "Unclosed scope");
 			return std::make_unique<Node>(ScopeNode{ std::move(scopedStatements) });
 		}
 

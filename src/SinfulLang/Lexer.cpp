@@ -64,7 +64,7 @@ namespace Sinful::Lexer
 				auto loc = sc.currentLoc();
 				if (val == "print")
 					tokens.add({ TokenType::Print, loc });
-				else if (val == "int")
+				else if (val == "i32")
 					tokens.add({ TokenType::I32Type, loc });
 				else
 					tokens.add({ TokenType::Variable, std::string(val), loc });

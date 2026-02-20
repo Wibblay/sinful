@@ -9,6 +9,10 @@ namespace Sinful::Exceptions
         std::string filename;
         size_t line;
         size_t column;
+
+        bool operator==(SourceLocation const& rhs) const { return filename == rhs.filename 
+            && line == rhs.line 
+            && column == rhs.column; }
     };
 
     struct Diagnostic
