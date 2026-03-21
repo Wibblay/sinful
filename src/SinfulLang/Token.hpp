@@ -3,6 +3,7 @@
 #include "sinful//pch.hpp"
 
 #include "Exceptions.hpp"
+#include "Types.hpp"
 
 namespace Sinful::Tokens
 {
@@ -20,9 +21,17 @@ namespace Sinful::Tokens
 		Minus,
 		Star,
 		FSlash,
+		Exclamation,
+		ExclEquals,
+		LessThan,
+		GreaterThan,
+		LeOrEqual,
+		GrOrEqual,
+		DubEquals,
 
 		// Types
 		I32Type,
+		BoolType,
 
 		// Syntactic
 		SemiColon,
@@ -33,9 +42,13 @@ namespace Sinful::Tokens
 
 		// Keywords
 		Print,
+		True,
+		False
 	};
 
 	std::string tokenTypeToString(TokenType type);
+
+	Types::Type convertTypeToken(TokenType type);
 
 	class Token
 	{

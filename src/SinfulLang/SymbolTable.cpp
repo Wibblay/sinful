@@ -1,6 +1,7 @@
 #include "SymbolTable.hpp"
 
 using namespace Sinful::Exceptions;
+using namespace Sinful::Types;
 
 namespace Sinful::Symbols
 {
@@ -11,7 +12,7 @@ namespace Sinful::Symbols
 
 	SymbolTable::~SymbolTable() { _manager->currentTable = _parent; _parent = nullptr; }
 
-	const Symbol& SymbolTable::addLocalVariable(const std::string& name, bool initialised)
+	const Symbol& SymbolTable::addLocalVariable(const std::string& name, Type type, bool initialised)
 	{
 		if (containsInCurrentScope(name)) throw CompilerException(Diagnostic{
 			Exceptions::Diagnostic::Level::Error,
@@ -19,9 +20,12 @@ namespace Sinful::Symbols
 			"Variable '" + name + "' is already defined in this scope"
 		});
 
-		Symbol sym{ name, _manager->currentStackOffset, initialised };
+		Symbol sym{ name, type, _manager->currentStackOffset, initialised };
 		_symbols[name] = sym;
-		_manager->currentStackOffset -= 8;
+		int size = getDataTypeSize(type);
+		int alignedSize = (size + 7) & ~7;
+		if (alignedSize == 0) alignedSize = 8;
+		_manager->currentStackOffset -= alignedSize;
 		return _symbols.at(name);
 	}
 
@@ -45,7 +49,7 @@ namespace Sinful::Symbols
 		return sym->stackOffset;
 	}
 
-	int SymbolTable::getStackOffsetInitialised(const std::string& name) const
+	int SymbolTable::getStackOffsetIfInitialised(const std::string& name) const
 	{
 		auto sym = getSymbol(name);
 		if (!sym) throw CompilerException(Diagnostic{
@@ -66,6 +70,22 @@ namespace Sinful::Symbols
 		if (_symbols.contains(name)) return true;
 		if (_parent != nullptr) return _parent->contains(name);
 		return false;
+	}
+
+	void SymbolTable::ensureInitialised(const std::string& name)
+	{
+		auto it = _symbols.find(name);
+		if (it != _symbols.end())
+		{
+			it->second.initialised = true; 
+			return;
+		}
+		if (_parent == nullptr) throw CompilerException(Diagnostic{
+			Exceptions::Diagnostic::Level::Error,
+			{},
+			"Unrecognised variable '" + name + "'"
+		});
+		_parent->ensureInitialised(name);
 	}
 
 	int SymbolTable::getTotalStackSize() const { return std::abs(_manager->currentStackOffset + 8); }
