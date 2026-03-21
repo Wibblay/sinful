@@ -127,6 +127,34 @@ namespace Sinful::Lexer
 					else
 						tokens.add({ TokenType::GreaterThan, loc });
 				}
+				else if (c == '&')
+				{
+					if (c2 == '&')
+					{
+						tokens.add({ TokenType::AmpAmp, loc });
+						sc.advance();
+					}
+					else
+						throw CompilerException(Diagnostic{
+							Exceptions::Diagnostic::Level::Error,
+							loc,
+							std::string("Unrecognised character encountered while lexing: ") + c
+						});
+				}
+				else if (c == '|')
+				{
+					if (c2 == '|')
+					{
+						tokens.add({ TokenType::PipePipe, loc });
+						sc.advance();
+					}
+					else
+						throw CompilerException(Diagnostic{
+							Exceptions::Diagnostic::Level::Error,
+							loc,
+							std::string("Unrecognised character encountered while lexing: ") + c
+						});
+				}
 				else
 				{
 					switch (c)

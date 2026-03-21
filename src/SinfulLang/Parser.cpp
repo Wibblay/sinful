@@ -7,6 +7,11 @@ using namespace Sinful::Types;
 
 namespace Sinful::Parser
 {
+	static std::unique_ptr<Node> parseAddSub(TokenStream& tokens);
+	static std::unique_ptr<Node> parseTerm(TokenStream& tokens);
+	static std::unique_ptr<Node> parseUnary(TokenStream& tokens);
+	static std::unique_ptr<Node> parseFactor(TokenStream& tokens);
+
 	std::unique_ptr<Node> parseProgram(TokenStream& tokens)
 	{
 		auto loc = tokens.peek().location();
@@ -92,23 +97,61 @@ namespace Sinful::Parser
 		});
 	}
 
-	std::unique_ptr<Node> parseCondition(TokenStream& tokens)
+	static std::unique_ptr<Node> parseCondition(TokenStream& tokens)
 	{
-		auto left = parseTerm(tokens);
-		if (tokens.peek().is({ TokenType::DubEquals, TokenType::LessThan, TokenType::LeOrEqual,
+		auto left = parseAddSub(tokens);
+		if (tokens.peek().is({ TokenType::DubEquals, TokenType::ExclEquals, TokenType::LessThan, TokenType::LeOrEqual,
 			TokenType::GreaterThan, TokenType::GrOrEqual }))
 		{
+			auto loc = left->location;
 			std::string op = tokens.peek().lexeme();
 			tokens.next();
-			auto right = parseExpression(tokens);
+			auto right = parseAddSub(tokens);
 			resolveNodeTypes(*left, *right);
 			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) },
-				Type::boolean(), left->location);
+				Type::boolean(), loc);
+		}
+		return left;
+	}
+
+	static std::unique_ptr<Node> parseLogicalAnd(TokenStream& tokens)
+	{
+		auto left = parseCondition(tokens);
+		while (tokens.peek().is(TokenType::AmpAmp))
+		{
+			auto loc = left->location;
+			tokens.next();
+			auto right = parseCondition(tokens);
+			expectType(*left, Type::boolean(), "&& operator requires boolean operands");
+			expectType(*right, Type::boolean(), "&& operator requires boolean operands");
+			left = std::make_unique<Node>(BinaryExpr{ "&&", std::move(left), std::move(right) },
+				Type::boolean(), loc);
+		}
+		return left;
+	}
+
+	static std::unique_ptr<Node> parseLogicalOr(TokenStream& tokens)
+	{
+		auto left = parseLogicalAnd(tokens);
+		while (tokens.peek().is(TokenType::PipePipe))
+		{
+			auto loc = left->location;
+			tokens.next();
+			auto right = parseLogicalAnd(tokens);
+			expectType(*left, Type::boolean(), "|| operator requires boolean operands");
+			expectType(*right, Type::boolean(), "|| operator requires boolean operands");
+			left = std::make_unique<Node>(BinaryExpr{ "||", std::move(left), std::move(right) },
+				Type::boolean(), loc);
 		}
 		return left;
 	}
 
 	std::unique_ptr<Node> parseExpression(TokenStream& tokens)
+	{
+		return parseLogicalOr(tokens);
+	}
+
+	static std::unique_ptr<Node> parseAddSub(TokenStream& tokens)
 	{
 		auto left = parseTerm(tokens);
 		while (tokens.peek().is({ TokenType::Plus, TokenType::Minus }))
@@ -117,6 +160,7 @@ namespace Sinful::Parser
 			tokens.next();
 			auto right = parseTerm(tokens);
 			resolveNodeTypes(*left, *right);
+			expectType(*left, Type::i32(), "Arithmetic operators require i32 operands");
 			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) },
 				left->type, left->location);
 		}
@@ -125,16 +169,29 @@ namespace Sinful::Parser
 
 	static std::unique_ptr<Node> parseTerm(TokenStream& tokens)
 	{
-		auto left = parseFactor(tokens);
+		auto left = parseUnary(tokens);
 		while (tokens.peek().is({ TokenType::Star, TokenType::FSlash }))
 		{
 			std::string op = tokens.peek().lexeme();
 			tokens.next();
-			auto right = parseFactor(tokens);
+			auto right = parseUnary(tokens);
 			resolveNodeTypes(*left, *right);
 			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) }, left->type, left->location);
 		}
 		return left;
+	}
+
+	static std::unique_ptr<Node> parseUnary(TokenStream& tokens)
+	{
+		if (tokens.peek().is(TokenType::Exclamation))
+		{
+			auto loc = tokens.peek().location();
+			tokens.next();
+			auto operand = parseUnary(tokens);
+			expectType(*operand, Type::boolean(), "! operator requires boolean operand");
+			return std::make_unique<Node>(UnaryExpr{ "!", std::move(operand) }, Type::boolean(), loc);
+		}
+		return parseFactor(tokens);
 	}
 
 	static std::unique_ptr<Node> parseFactor(TokenStream& tokens)

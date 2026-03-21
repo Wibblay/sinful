@@ -9,7 +9,12 @@ namespace Sinful::AsmGeneration
     void Generator::traverseAsmGenerator(const Node& node)
     {
         std::visit(Overloaded{
-            [&](const LiteralNode& n) { mov("rax", n.value); },
+            [&](const LiteralNode& n)
+            {
+                if (n.value == "true") { mov("rax", "1"); return; }
+                if (n.value == "false") { mov("rax", "0"); return; }
+                mov("rax", n.value);
+            },
             [&](const VariableNode& n)
             {
                 try
@@ -40,6 +45,26 @@ namespace Sinful::AsmGeneration
                     set0("rdx");
                     emit("idiv", "rbx");
                 }
+                else if (n.op == "==" || n.op == "!=" || n.op == "<" || n.op == "<=" || n.op == ">" || n.op == ">=")
+                {
+                    emit("cmp", "rax, rbx");
+                    if (n.op == "==")      emit("sete", "al");
+                    else if (n.op == "!=") emit("setne", "al");
+                    else if (n.op == "<")  emit("setl", "al");
+                    else if (n.op == "<=") emit("setle", "al");
+                    else if (n.op == ">")  emit("setg", "al");
+                    else if (n.op == ">=") emit("setge", "al");
+                    emit("movzx", "rax, al");
+                }
+                else if (n.op == "&&") emit("and", "rax, rbx");
+                else if (n.op == "||") emit("or", "rax, rbx");
+            },
+            [&](const UnaryExpr& n)
+            {
+                traverseAsmGenerator(*n.operand);
+                emit("test", "rax, rax");
+                emit("sete", "al");
+                emit("movzx", "rax, al");
             },
             [&](const Assignment& n)
             {

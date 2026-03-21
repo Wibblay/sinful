@@ -27,6 +27,8 @@ namespace Sinful::Tokens
 		case LeOrEqual:		return "<=";
 		case GrOrEqual:		return ">=";
 		case DubEquals:		return "==";
+		case AmpAmp:		return "&&";
+		case PipePipe:		return "||";
 
 		case I32Type:		return "i32";
 		case BoolType:		return "bool";

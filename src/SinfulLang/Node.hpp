@@ -12,6 +12,7 @@ namespace Sinful::Nodes
 
 	struct LiteralNode  { std::string value; };
 	struct VariableNode { std::string name; };
+	struct UnaryExpr    { std::string op; std::unique_ptr<Node> operand; };
 	struct BinaryExpr   { std::string op; std::unique_ptr<Node> left; std::unique_ptr<Node> right; };
 	struct Assignment
 	{
@@ -28,6 +29,7 @@ namespace Sinful::Nodes
 		LiteralNode,
 		VariableNode,
 		BinaryExpr,
+		UnaryExpr,
 		Assignment,
 		Declaration,
 		PrintStmt,
