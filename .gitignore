@@ -1,2 +1,6 @@
 /out
 /.vs
+/vcpkg_installed
+/assembly
+*.asm
+.claude/settings.local.json

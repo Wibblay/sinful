@@ -1,0 +1,9 @@
+// Example syntax
+
+x = 1 // simple assignment
+y = i32 2 // typed assignment
+z = i32 // default assignment
+z = y // assignment to variable
+x = y * z + z  // assignment to expression
+
+print x // print statement

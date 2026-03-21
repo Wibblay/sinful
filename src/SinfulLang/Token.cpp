@@ -1,6 +1,7 @@
 #include "Token.hpp"
 
 using namespace Sinful::Exceptions;
+using namespace Sinful::Types;
 
 namespace Sinful::Tokens
 {
@@ -9,50 +10,64 @@ namespace Sinful::Tokens
 		switch (type)
 		{
 			using enum TokenType;
-		case NullToken:		return "NullToken";
-		case Variable:		return "Variable";
-		case IntLiteral:	return "IntLiteral";
-		case Equals:		return "Equals";
-		case Plus:			return "Plus";
-		case Minus:			return "Minus";
-		case Star:			return "Star";
-		case FSlash:		return "ForwardSlash";
+		case NullToken:		return "nullToken";
+
+		case Variable:		return "variable";
+		case IntLiteral:	return "intLiteral";
+
+		case Equals:		return "=";
+		case Plus:			return "+";
+		case Minus:			return "-";
+		case Star:			return "*";
+		case FSlash:		return "/";
+		case Exclamation:	return "!";
+		case ExclEquals:	return "!=";
+		case LessThan:		return "<";
+		case GreaterThan:	return ">";
+		case LeOrEqual:		return "<=";
+		case GrOrEqual:		return ">=";
+		case DubEquals:		return "==";
+
 		case I32Type:		return "i32";
-		case SemiColon:		return "SemiColon";
-		case LBracket:		return "LeftBracket";
-		case RBracket:		return "RightBracket";
-		case LBrace:		return "LeftBrace";
-		case RBrace:		return "RightBrace";
+		case BoolType:		return "bool";
+
+		case SemiColon:		return ";";
+		case LBracket:		return "(";
+		case RBracket:		return ")";
+		case LBrace:		return "{";
+		case RBrace:		return "}";
+
 		case Print:			return "print";
-		default:            return "Unknown";
+		case True:			return "true";
+		case False:			return "false";
+		default:            return "";
+		}
+	}
+
+	Type convertTypeToken(TokenType type)
+	{
+		switch (type)
+		{
+		case TokenType::I32Type:	return Type::i32();
+		case TokenType::BoolType:	return Type::boolean();
+		default:
+			throw CompilerException(Diagnostic{
+				Exceptions::Diagnostic::Level::Error,
+				{},
+				"Token type " + tokenTypeToString(type) + " is not a type token"
+			});
 		}
 	}
 
 	Token::Token(TokenType type, SourceLocation loc) : _type(type), _location(loc)
 	{
-		switch (type)
-		{
-			using enum TokenType;
-		case NullToken: case Print: case Variable: case IntLiteral:
-		case I32Type:
-			_lexeme = ""; break;
-		case Equals:		_lexeme = "="; break;
-		case Plus:			_lexeme = "+"; break;
-		case Minus:			_lexeme = "-"; break;
-		case Star:			_lexeme = "*"; break;
-		case FSlash:		_lexeme = "/"; break;
-		case SemiColon:		_lexeme = ";"; break;
-		case LBracket:		_lexeme = "("; break;
-		case RBracket:		_lexeme = ")"; break;
-		case LBrace:		_lexeme = "{"; break;
-		case RBrace:		_lexeme = "}"; break;
-		default: 
-			throw CompilerException(Diagnostic{
-				Exceptions::Diagnostic::Level::Error,
-				loc,
-				"Unknown default lexeme for type " + tokenTypeToString(type)
-			});
-		}
+		_lexeme = tokenTypeToString(type);
+		if (_lexeme == "") throw CompilerException(Diagnostic{
+			Exceptions::Diagnostic::Level::Error,
+			loc,
+			"Unrecognise token type " + tokenTypeToString(type)
+		});
+		
 	}
 
 	const Token& TokenStream::peek(const size_t offset) const

@@ -9,17 +9,17 @@ namespace Sinful::AsmGeneration
     void Generator::traverseAsmGenerator(const Node& node)
     {
         std::visit(Overloaded{
-            [&](const LiteralNode& n) { mov("rax", std::to_string(n.value)); },
+            [&](const LiteralNode& n) { mov("rax", n.value); },
             [&](const VariableNode& n)
             {
                 try
                 {
-                    auto offset = _symbolTable.currentTable->getStackOffsetInitialised(n.name);
+                    auto offset = _symbolTable.currentTable->getStackOffsetIfInitialised(n.name);
                     mov("rax", "[rbp" + std::to_string(offset) + "]");
                 }
                 catch (CompilerException e)
                 {
-                    e.setLocation(n.location);
+                    e.setLocation(node.location);
                     throw e;
                 }
             },
@@ -41,26 +41,29 @@ namespace Sinful::AsmGeneration
                     emit("idiv", "rbx");
                 }
             },
-            [&](const Declaration& n) 
-            { 
-                try
-                {
-                    _symbolTable.currentTable->addLocalVariable(n.name);
-                }
-                catch (CompilerException e)
-                {
-                    e.setLocation(n.location);
-                    throw e;
-                }
-            },
             [&](const Assignment& n)
             {
                 traverseAsmGenerator(*n.value); // Evaluate right side into rax
-                if (!_symbolTable.currentTable->contains(n.name))
-                    _symbolTable.currentTable->addLocalVariable(n.name, true);
-                
+                if (n.mustDeclare || !_symbolTable.currentTable->contains(n.name))
+                {
+                    try
+                    {
+                        _symbolTable.currentTable->addLocalVariable(n.name, node.type);
+                    }
+                    catch (CompilerException e)
+                    {
+                        e.setLocation(n.location);
+                        throw e;
+                    }
+                }
+
+                _symbolTable.currentTable->ensureInitialised(n.name);
                 auto offset = _symbolTable.currentTable->getStackOffset(n.name);
                 mov("[rbp" + std::to_string(offset) + "]", "rax");
+            },
+            [&](const Declaration& n)
+            {
+                _symbolTable.currentTable->addLocalVariable(n.name, node.type, false);
             },
             [&](const PrintStmt& n)
             {

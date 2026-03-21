@@ -48,7 +48,7 @@ namespace Sinful::Lexer
 	{
 		while (!sc.atEnd())
 		{
-			char c = sc.peek();
+			auto c = sc.peek();
 
 			if (std::isspace(c))
 				sc.advance();
@@ -66,6 +66,12 @@ namespace Sinful::Lexer
 					tokens.add({ TokenType::Print, loc });
 				else if (val == "i32")
 					tokens.add({ TokenType::I32Type, loc });
+				else if (val == "bool")
+					tokens.add({ TokenType::BoolType, loc });
+				else if (val == "true")
+					tokens.add({ TokenType::True, loc });
+				else if (val == "false")
+					tokens.add({ TokenType::False, loc });
 				else
 					tokens.add({ TokenType::Variable, std::string(val), loc });
 			}
@@ -73,19 +79,58 @@ namespace Sinful::Lexer
 			{
 				sc.advance();
 				auto loc = sc.currentLoc();
+				auto c2 = sc.peek();
 				if (c == '/')
 				{
-					char c2 = sc.peek();
 					if (c2 == '/')
 						break;
 					else
 						tokens.add({ TokenType::FSlash, loc });
 				}
+				else if (c == '=')
+				{
+					if (c2 == '=')
+					{
+						tokens.add({ TokenType::DubEquals, loc });
+						sc.advance();
+					}
+					else
+						tokens.add({ TokenType::Equals, loc });
+				}
+				else if (c == '!')
+				{
+					if (c2 == '=')
+					{
+						tokens.add({ TokenType::ExclEquals, loc });
+						sc.advance();
+					}
+					else
+						tokens.add({ TokenType::Exclamation, loc });
+				}
+				else if (c == '<')
+				{
+					if (c2 == '=')
+					{
+						tokens.add({ TokenType::LeOrEqual, loc });
+						sc.advance();
+					}
+					else
+						tokens.add({ TokenType::LessThan, loc });
+				}
+				else if (c == '>')
+				{
+					if (c2 == '=')
+					{
+						tokens.add({ TokenType::GrOrEqual, loc });
+						sc.advance();
+					}
+					else
+						tokens.add({ TokenType::GreaterThan, loc });
+				}
 				else
 				{
 					switch (c)
 					{
-					case '=': tokens.add({ TokenType::Equals, loc }); break;
 					case '+': tokens.add({ TokenType::Plus, loc }); break;
 					case '-': tokens.add({ TokenType::Minus, loc }); break;
 					case '*': tokens.add({ TokenType::Star, loc }); break;
@@ -99,7 +144,7 @@ namespace Sinful::Lexer
 							Exceptions::Diagnostic::Level::Error,
 							loc,
 							std::string("Unrecognised character encountered while lexing: ") + c
-							});
+						});
 					}
 				}
 			}

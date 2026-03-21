@@ -1,4 +1,4 @@
-#include <gtest\gtest.h>
+#include <gtest/gtest.h>
 #include "Generator.hpp"
 
 using namespace Sinful::AsmGeneration;
@@ -8,8 +8,8 @@ TEST(GeneratorTest, GeneratesCorrectMathAsm)
 {
     Generator gen;
     // Simulate: x = 5 + 10;
-    auto left = std::make_unique<Node>(LiteralNode{ 5 });
-    auto right = std::make_unique<Node>(LiteralNode{ 10 });
+    auto left = std::make_unique<Node>(LiteralNode{ "5" });
+    auto right = std::make_unique<Node>(LiteralNode{ "10" });
     auto bin = std::make_unique<Node>(BinaryExpr{ "+", std::move(left), std::move(right) });
     auto assign = std::make_unique<Node>(Assignment{ "x", std::move(bin) });
 

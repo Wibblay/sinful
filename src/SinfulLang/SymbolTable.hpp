@@ -3,12 +3,14 @@
 #include "sinful/pch.hpp"
 
 #include "Exceptions.hpp"
+#include "Types.hpp"
 
 namespace Sinful::Symbols
 {
 	struct Symbol
 	{
 		std::string name;
+		Types::Type type;
 		int stackOffset = 0;
 		bool initialised = false;
 	};
@@ -22,13 +24,15 @@ namespace Sinful::Symbols
 		explicit SymbolTable(SymbolTableManager* manager);
 		~SymbolTable();
 
-		const Symbol& addLocalVariable(const std::string& name, bool initialised = false);
+		const Symbol& addLocalVariable(const std::string& name, Types::Type type, bool initialised = false);
+		const Symbol& addLocalVariable(const std::string& name) { return addLocalVariable(name, Types::Type::unresolved()); }
 		std::optional<Symbol> getSymbol(const std::string& name) const;
 		int getStackOffset(const std::string& name) const;
-		int getStackOffsetInitialised(const std::string& name) const;
+		int getStackOffsetIfInitialised(const std::string& name) const;
 
 		bool containsInCurrentScope(const std::string& name) const { return _symbols.contains(name); }
 		bool contains(const std::string& name) const;
+		void ensureInitialised(const std::string& name);
 		int getTotalStackSize() const;
 
 	private:

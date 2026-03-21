@@ -6,10 +6,11 @@ using namespace Sinful::Nodes;
 using namespace Sinful::Parser;
 using namespace Sinful::Exceptions;
 
+static SourceLocation defaultLoc{ "", 0, 0 };
+static SourceLocation testLoc{ "", 1, 4 };
+
 TEST(ParserTest, RespectsOperatorPrecedence)
 {
-    SourceLocation defaultLoc{ "", 0, 0 };
-
     // 5 + 2 * 3;
     std::vector<Token> tokens = {
         {TokenType::IntLiteral, "5", defaultLoc},
@@ -35,10 +36,8 @@ TEST(ParserTest, RespectsOperatorPrecedence)
 
 TEST(ParserTest, ParsesUntypedAssignment)
 {
-    SourceLocation defaultLoc{ "", 0, 0 };
-
     std::vector<Token> tokens = {
-        {TokenType::Variable, "x", defaultLoc},
+        {TokenType::Variable, "x", testLoc},
         {TokenType::Equals, "=", defaultLoc},
         {TokenType::IntLiteral, "5", defaultLoc},
         {TokenType::SemiColon, ";", defaultLoc}
@@ -50,20 +49,20 @@ TEST(ParserTest, ParsesUntypedAssignment)
     ASSERT_TRUE(std::holds_alternative<Assignment>(root->data));
     auto& assign = std::get<Assignment>(root->data);
     EXPECT_EQ(assign.name, "x");
+    EXPECT_EQ(assign.mustDeclare, false);
+    EXPECT_EQ(assign.location, testLoc);
 
-    // Right child should be "*"
+    // Right child should be literal 5
     ASSERT_TRUE(std::holds_alternative<LiteralNode>(assign.value->data));
     auto& literal = std::get<LiteralNode>(assign.value->data);
-    EXPECT_EQ(literal.value, 5);
+    EXPECT_EQ(literal.value, "5");
 }
 
 TEST(ParserTest, ParsesTypedAssignment)
 {
-    SourceLocation defaultLoc{ "", 0, 0 };
-
     std::vector<Token> tokens = {
         {TokenType::I32Type, defaultLoc},
-        {TokenType::Variable, "x", defaultLoc},
+        {TokenType::Variable, "x", testLoc},
         {TokenType::Equals, "=", defaultLoc},
         {TokenType::IntLiteral, "5", defaultLoc},
         {TokenType::SemiColon, ";", defaultLoc}
@@ -75,11 +74,13 @@ TEST(ParserTest, ParsesTypedAssignment)
     ASSERT_TRUE(std::holds_alternative<Assignment>(root->data));
     auto& assign = std::get<Assignment>(root->data);
     EXPECT_EQ(assign.name, "x");
+    EXPECT_EQ(assign.mustDeclare, true);
+    EXPECT_EQ(assign.location, testLoc);
 
-    // Right child should be "*"
+    // Right child should be literal 5
     ASSERT_TRUE(std::holds_alternative<LiteralNode>(assign.value->data));
     auto& literal = std::get<LiteralNode>(assign.value->data);
-    EXPECT_EQ(literal.value, 5);
+    EXPECT_EQ(literal.value, "5");
 }
 
 TEST(ParserTest, ParsesDeclaration)

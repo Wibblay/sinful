@@ -1,84 +1,110 @@
 #include "Parser.hpp"
 
+using namespace Sinful::Exceptions;
 using namespace Sinful::Nodes;
 using namespace Sinful::Tokens;
-using namespace Sinful::Exceptions;
+using namespace Sinful::Types;
 
 namespace Sinful::Parser
 {
 	std::unique_ptr<Node> parseProgram(TokenStream& tokens)
 	{
+		auto loc = tokens.peek().location();
 		std::vector<std::unique_ptr<Node>> program{};
 		while (tokens.hasNext())
 			program.emplace_back(parseStatement(tokens));
 
-		return std::make_unique<Node>(ScopeNode{ std::move(program) });
+		return std::make_unique<Node>(ScopeNode{ std::move(program) }, Type::none(), loc);
 	}
 
 	std::unique_ptr<Node> parseBlock(TokenStream& tokens)
 	{
-		std::vector<std::unique_ptr<Node>> nodes{};
+		auto loc = tokens.peek().location();
+		tokens.next();
+		std::vector<std::unique_ptr<Node>> scopedStatements;
 		while (!tokens.peek().is(TokenType::RBrace))
-			nodes.emplace_back(parseStatement(tokens));
+		{
+			auto stmt = parseStatement(tokens);
+			scopedStatements.emplace_back(std::move(stmt));
+			if (!tokens.hasNext())
+				break;
+		}
 		expect(tokens, TokenType::RBrace, "Unclosed scope");
-		return std::make_unique<Node>(ScopeNode{ std::move(nodes) });
+		return std::make_unique<Node>(ScopeNode{ std::move(scopedStatements) }, Type::none(), loc);
 	}
 
 	std::unique_ptr<Node> parseStatement(TokenStream& tokens)
 	{
 		if (tokens.peek().is(TokenType::LBrace))
-		{
-			tokens.next();
-			std::vector<std::unique_ptr<Node>> scopedStatements;
-			while (!tokens.peek().is(TokenType::RBrace))
-			{
-				auto stmt = parseStatement(tokens);
-				scopedStatements.emplace_back(std::move(stmt));
-				if (!tokens.hasNext())
-					break;
-			}
-			expect(tokens, TokenType::RBrace, "Unclosed scope");
-			return std::make_unique<Node>(ScopeNode{ std::move(scopedStatements) });
-		}
+			return parseBlock(tokens);
 
 		if (tokens.peek().is(TokenType::Print))
 		{
+			auto loc = tokens.peek().location();
 			tokens.next();
 			auto expr = parseExpression(tokens);
+			expectType(*expr, Type::i32(), "May only print numeric values");
 			expect(tokens, TokenType::SemiColon, "Missing semicolon after print");
-			return std::make_unique<Node>(PrintStmt{ std::move(expr) });
+			return std::make_unique<Node>(PrintStmt{ std::move(expr) }, Type::i32(), loc);
 		}
 
-		if (tokens.peek().is(TokenType::I32Type))
+		// Typed declaration: Type Variable ;
+		if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType })
+			&& tokens.peek(1).is(TokenType::Variable)
+			&& tokens.peek(2).is(TokenType::SemiColon))
 		{
-			tokens.next();
-			if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
-			{
-				std::string name = tokens.peek().lexeme();
-				tokens.next(); // var
-				tokens.next(); // =
-				auto expr = parseExpression(tokens);
-				expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after assignment");
-				return std::make_unique<Node>(Assignment{ name, std::move(expr) });
-			}
-			else if (tokens.peek().is(TokenType::Variable))
-			{
-				std::string name = tokens.peek().lexeme();
-				SourceLocation loc = tokens.peek().location();
-				tokens.next();
-				expect(tokens, TokenType::SemiColon, "Missing semicolon after declaration");
-				return std::make_unique<Node>(Declaration{ name, loc });
-			}
+			Type declaredType = convertTypeToken(tokens.peek().type());
+			tokens.next(); // type token
+			std::string name = tokens.peek().lexeme();
+			auto loc = tokens.peek().location();
+			tokens.next(); // variable
+			tokens.next(); // semicolon
+			return std::make_unique<Node>(Declaration{ name, loc }, declaredType, loc);
 		}
 
+		// Typed assignment: Type Variable = Expr ;
+		if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType })
+			&& tokens.peek(1).is(TokenType::Variable)
+			&& tokens.peek(2).is(TokenType::Equals))
+		{
+			Type enforcedType = convertTypeToken(tokens.peek().type());
+			tokens.next(); // type token
+			std::string name = tokens.peek().lexeme();
+			auto loc = tokens.peek().location();
+			tokens.next(); // variable
+			tokens.next(); // =
+			auto expr = parseExpression(tokens);
+			expectType(*expr, enforcedType, "Expression did not match stated type");
+			expect(tokens, TokenType::SemiColon, "Missing semicolon after assignment");
+			return std::make_unique<Node>(Assignment{ name, std::move(expr), true, loc }, enforcedType, loc);
+		}
+
+		// Untyped assignment: Variable = [Type] Expr ;
 		if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
 		{
 			std::string name = tokens.peek().lexeme();
+			auto loc = tokens.peek().location();
 			tokens.next(); // var
 			tokens.next(); // =
-			auto expr = parseExpression(tokens);
+
+			Type enforcedType = Type::none();
+			if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType }))
+			{
+				enforcedType = convertTypeToken(tokens.peek().type());
+				tokens.next();
+			}
+
+			std::unique_ptr<Node> expr;
+			if (tokens.peek().is(TokenType::SemiColon))
+				expr = defaultFactorForType(tokens);
+			else
+			{
+				expr = parseExpression(tokens);
+				if (!enforcedType.isNone())
+					expectType(*expr, enforcedType, "Expression did not match stated type");
+			}
 			expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after assignment");
-			return std::make_unique<Node>(Assignment{ name, std::move(expr) });
+			return std::make_unique<Node>(Assignment{ name, std::move(expr), false, loc }, expr->type, loc);
 		}
 
 		throw CompilerException(Diagnostic{
@@ -86,6 +112,22 @@ namespace Sinful::Parser
 			tokens.peek().location(),
 			"Statement does not conform to recognised pattern"
 		});
+	}
+
+	std::unique_ptr<Node> parseCondition(TokenStream& tokens)
+	{
+		auto left = parseTerm(tokens);
+		if (tokens.peek().is({ TokenType::DubEquals, TokenType::LessThan, TokenType::LeOrEqual,
+			TokenType::GreaterThan, TokenType::GrOrEqual }))
+		{
+			std::string op = tokens.peek().lexeme();
+			tokens.next();
+			auto right = parseExpression(tokens);
+			resolveNodeTypes(*left, *right);
+			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) },
+				Type::boolean(), left->location);
+		}
+		return left;
 	}
 
 	std::unique_ptr<Node> parseExpression(TokenStream& tokens)
@@ -96,7 +138,9 @@ namespace Sinful::Parser
 			std::string op = tokens.peek().lexeme();
 			tokens.next();
 			auto right = parseTerm(tokens);
-			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) });
+			resolveNodeTypes(*left, *right);
+			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) },
+				left->type, left->location);
 		}
 		return left;
 	}
@@ -109,25 +153,35 @@ namespace Sinful::Parser
 			std::string op = tokens.peek().lexeme();
 			tokens.next();
 			auto right = parseFactor(tokens);
-			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) });
+			resolveNodeTypes(*left, *right);
+			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) }, left->type, left->location);
 		}
 		return left;
 	}
-	
+
 	static std::unique_ptr<Node> parseFactor(TokenStream& tokens)
 	{
 		auto& t = tokens.peek();
 		if (t.is(TokenType::IntLiteral))
 		{
-			int val = std::stoi(t.lexeme());
 			tokens.next();
-			return std::make_unique<Node>(LiteralNode{ val });
+			return std::make_unique<Node>(LiteralNode{ t.lexeme() }, Type::i32(), t.location());
+		}
+		if (t.is(TokenType::True))
+		{
+			tokens.next();
+			return std::make_unique<Node>(LiteralNode{ "true" }, Type::boolean(), t.location());
+		}
+		if (t.is(TokenType::False))
+		{
+			tokens.next();
+			return std::make_unique<Node>(LiteralNode{ "false" }, Type::boolean(), t.location());
 		}
 		if (t.is(TokenType::Variable))
 		{
 			std::string name = t.lexeme();
 			tokens.next();
-			return std::make_unique<Node>(VariableNode{ name, t.location() });
+			return std::make_unique<Node>(VariableNode{ name }, Type::unresolved(), t.location());
 		}
 		if (t.is(TokenType::LBracket))
 		{
@@ -139,15 +193,31 @@ namespace Sinful::Parser
 					Exceptions::Diagnostic::Level::Error,
 					t2.location(),
 					"Unclosed parentheses"
-					});
+				});
 			tokens.next();
 			return bracketExpr;
 		}
 		throw CompilerException(Diagnostic{
+			Exceptions::Diagnostic::Level::Error,
+			t.location(),
+			"Expected literal or variable but found '" + t.lexeme() + "'"
+		});
+	}
+
+	static std::unique_ptr<Node> defaultFactorForType(TokenStream& tokens)
+	{
+		switch (tokens.peek().type())
+		{
+			using enum TokenType;
+		case I32Type:	return std::make_unique<Node>(LiteralNode{ "0" });
+		case BoolType:  return std::make_unique<Node>(LiteralNode{ "false" });
+		default:
+			throw CompilerException(Diagnostic{
 				Exceptions::Diagnostic::Level::Error,
-				t.location(),
-				"Expected literal or variable but found '" + t.lexeme() + "'"
+				tokens.peek().location(),
+				"Expected type token but received '" + tokenTypeToString(tokens.peek().type()) + "'"
 			});
+		}
 	}
 
 	static void expect(Tokens::TokenStream& tokens, Tokens::TokenType type, std::string msg)
@@ -162,5 +232,30 @@ namespace Sinful::Parser
 			});
 		}
 		tokens.next();
-	}	
+	}
+
+	static void resolveNodeTypes(Node& left, Node& right)
+	{
+		if (left.type.isUnresolved())
+		{
+			if (!right.type.isUnresolved()) left.type = right.type;
+		}
+		else if (right.type.isUnresolved())
+			right.type = left.type;
+		else
+			expectType(right, left.type, "Expression operand types did not match");
+	}
+
+	static void expectType(const Nodes::Node& node, Types::Type type, std::string msg)
+	{
+		if (node.type.isUnresolved()) return; // resolved at codegen time
+		if (node.type != type)
+		{
+			throw CompilerException(Diagnostic{
+				Exceptions::Diagnostic::Level::Error,
+				node.location,
+				msg + "\nExpected '" + dataTypeToString(type) + "' but found '" + dataTypeToString(node.type) + "'"
+			});
+		}
+	}
 }
