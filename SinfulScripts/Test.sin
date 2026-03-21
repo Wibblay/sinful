@@ -1,13 +1,13 @@
 test = 60; // aohwije +
-i32 test2;
+test2 = i32;
 {
 	test2 = 3;
-	i32 test3;
+	test3 = i32;
 	print test + test2;
 }
 
 {
-	i32 test3 = 7;
+	test3 = 7;
 	print test3;
 	test = 120;
 }

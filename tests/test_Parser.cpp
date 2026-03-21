@@ -58,8 +58,9 @@ TEST(ParserTest, ParsesUntypedAssignment)
     EXPECT_EQ(literal.value, "5");
 }
 
-TEST(ParserTest, ParsesTypedAssignment)
+TEST(ParserTest, RejectsTypedAssignment)
 {
+    // i32 x = 5; is not valid grammar — type prefixes on assignments are not accepted
     std::vector<Token> tokens = {
         {TokenType::I32Type, defaultLoc},
         {TokenType::Variable, "x", testLoc},
@@ -68,39 +69,19 @@ TEST(ParserTest, ParsesTypedAssignment)
         {TokenType::SemiColon, ";", defaultLoc}
     };
     TokenStream stream(tokens);
-    auto root = parseStatement(stream);
-
-    // Root should be assignment
-    ASSERT_TRUE(std::holds_alternative<Assignment>(root->data));
-    auto& assign = std::get<Assignment>(root->data);
-    EXPECT_EQ(assign.name, "x");
-    EXPECT_EQ(assign.mustDeclare, true);
-    EXPECT_EQ(assign.location, testLoc);
-
-    // Right child should be literal 5
-    ASSERT_TRUE(std::holds_alternative<LiteralNode>(assign.value->data));
-    auto& literal = std::get<LiteralNode>(assign.value->data);
-    EXPECT_EQ(literal.value, "5");
+    EXPECT_THROW(parseStatement(stream), CompilerException);
 }
 
-TEST(ParserTest, ParsesDeclaration)
+TEST(ParserTest, RejectsDeclaration)
 {
-    SourceLocation defaultLoc{ "", 0, 0 };
-    SourceLocation testLoc{ "", 1, 4 };
-
+    // i32 x; is not valid grammar — type-prefixed declarations are not accepted
     std::vector<Token> tokens = {
         {TokenType::I32Type, defaultLoc},
         {TokenType::Variable, "x", testLoc},
         {TokenType::SemiColon, ";", defaultLoc}
     };
     TokenStream stream(tokens);
-    auto root = parseStatement(stream);
-
-    // Root should be declaration
-    ASSERT_TRUE(std::holds_alternative<Declaration>(root->data));
-    auto& decl = std::get<Declaration>(root->data);
-    EXPECT_EQ(decl.name, "x");
-    EXPECT_EQ(decl.location, testLoc);
+    EXPECT_THROW(parseStatement(stream), CompilerException);
 }
 
 TEST(ParserTest, ParsesPrint)

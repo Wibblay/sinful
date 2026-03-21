@@ -48,38 +48,7 @@ namespace Sinful::Parser
 			return std::make_unique<Node>(PrintStmt{ std::move(expr) }, Type::i32(), loc);
 		}
 
-		// Typed declaration: Type Variable ;
-		if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType })
-			&& tokens.peek(1).is(TokenType::Variable)
-			&& tokens.peek(2).is(TokenType::SemiColon))
-		{
-			Type declaredType = convertTypeToken(tokens.peek().type());
-			tokens.next(); // type token
-			std::string name = tokens.peek().lexeme();
-			auto loc = tokens.peek().location();
-			tokens.next(); // variable
-			tokens.next(); // semicolon
-			return std::make_unique<Node>(Declaration{ name, loc }, declaredType, loc);
-		}
-
-		// Typed assignment: Type Variable = Expr ;
-		if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType })
-			&& tokens.peek(1).is(TokenType::Variable)
-			&& tokens.peek(2).is(TokenType::Equals))
-		{
-			Type enforcedType = convertTypeToken(tokens.peek().type());
-			tokens.next(); // type token
-			std::string name = tokens.peek().lexeme();
-			auto loc = tokens.peek().location();
-			tokens.next(); // variable
-			tokens.next(); // =
-			auto expr = parseExpression(tokens);
-			expectType(*expr, enforcedType, "Expression did not match stated type");
-			expect(tokens, TokenType::SemiColon, "Missing semicolon after assignment");
-			return std::make_unique<Node>(Assignment{ name, std::move(expr), true, loc }, enforcedType, loc);
-		}
-
-		// Untyped assignment: Variable = [Type] Expr ;
+		// Untyped assignment: Variable = [Type] Expr ;   or   Variable = Type ;  (default init)
 		if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
 		{
 			std::string name = tokens.peek().lexeme();
@@ -88,23 +57,32 @@ namespace Sinful::Parser
 			tokens.next(); // =
 
 			Type enforcedType = Type::none();
+			std::unique_ptr<Node> expr;
+
 			if (tokens.peek().is({ TokenType::I32Type, TokenType::BoolType }))
 			{
 				enforcedType = convertTypeToken(tokens.peek().type());
-				tokens.next();
+				if (tokens.peek(1).is(TokenType::SemiColon))
+				{
+					// foo = i32; — default-initialise to type's zero value
+					expr = defaultFactorForType(tokens); // peeks type token before consuming
+					tokens.next(); // consume type token
+				}
+				else
+				{
+					tokens.next(); // consume type token
+					expr = parseExpression(tokens);
+					expectType(*expr, enforcedType, "Expression did not match stated type");
+				}
 			}
-
-			std::unique_ptr<Node> expr;
-			if (tokens.peek().is(TokenType::SemiColon))
-				expr = defaultFactorForType(tokens);
 			else
 			{
 				expr = parseExpression(tokens);
-				if (!enforcedType.isNone())
-					expectType(*expr, enforcedType, "Expression did not match stated type");
 			}
+
 			expect(tokens, Tokens::TokenType::SemiColon, "Missing semicolon after assignment");
-			return std::make_unique<Node>(Assignment{ name, std::move(expr), false, loc }, expr->type, loc);
+			Type nodeType = enforcedType.isNone() ? expr->type : enforcedType;
+			return std::make_unique<Node>(Assignment{ name, std::move(expr), false, loc }, nodeType, loc);
 		}
 
 		throw CompilerException(Diagnostic{
