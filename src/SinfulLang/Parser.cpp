@@ -176,6 +176,7 @@ namespace Sinful::Parser
 			tokens.next();
 			auto right = parseUnary(tokens);
 			resolveNodeTypes(*left, *right);
+			expectType(*left, Type::i32(), "Arithmetic operators require i32 operands");
 			left = std::make_unique<Node>(BinaryExpr{ op, std::move(left), std::move(right) }, left->type, left->location);
 		}
 		return left;

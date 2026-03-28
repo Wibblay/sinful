@@ -40,17 +40,22 @@ namespace Sinful::Symbols
 		SymbolTableManager* _manager;
 		SymbolTable* _parent;
 		std::unordered_map<std::string, Symbol> _symbols;
+		int _savedStackOffset = 0;
 	};
 
 	struct SymbolTableManager
 	{
 		SymbolTableManager() { globalTable = std::make_unique<SymbolTable>(this); }
-		~SymbolTableManager() { while (currentTable != globalTable.get()) { delete currentTable; } }
+		~SymbolTableManager() = default;
 
-		int getTotalStackSize() const { return std::abs(currentStackOffset + 8); }
+		// peakStackOffset tracks the deepest the stack has ever grown across all scopes.
+		// currentStackOffset is restored on scope exit, but the peak is never walked back —
+		// setupStackFrame uses it to allocate the correct frame size for the whole function.
+		int getTotalStackSize() const { return std::abs(peakStackOffset + 8); }
 
 		std::unique_ptr<SymbolTable> globalTable;
 		SymbolTable* currentTable = nullptr;
 		int currentStackOffset = -8;
+		int peakStackOffset = -8;
 	};		
 }
