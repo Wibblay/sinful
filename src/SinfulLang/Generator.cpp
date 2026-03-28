@@ -9,7 +9,12 @@ namespace Sinful::AsmGeneration
     void Generator::traverseAsmGenerator(const Node& node)
     {
         std::visit(Overloaded{
-            [&](const LiteralNode& n) { mov("rax", n.value); },
+            [&](const LiteralNode& n)
+            {
+                if (n.value == "true") { mov("rax", "1"); return; }
+                if (n.value == "false") { mov("rax", "0"); return; }
+                mov("rax", n.value);
+            },
             [&](const VariableNode& n)
             {
                 try
@@ -25,20 +30,45 @@ namespace Sinful::AsmGeneration
             },
             [&](const BinaryExpr& n)
             {
-                traverseAsmGenerator(*n.left); // Evaluate left into rax and push
+                traverseAsmGenerator(*n.left);
                 push("rax");
 
-                traverseAsmGenerator(*n.right); // Evaluate right into rax and move to rbx
+                traverseAsmGenerator(*n.right);
                 mov("rbx", "rax");
 
-                pop("rax"); // Pop left and operate (result in rax)
-                if (n.op == "+") add("rax", "rbx");
-                else if (n.op == "-") sub("rax", "rbx");
-                else if (n.op == "*") emit("imul", "rax, rbx");
-                else if (n.op == "/")
+                pop("rax");
+                switch (n.op)
                 {
+                case BinaryOp::Add: add("rax", "rbx"); break;
+                case BinaryOp::Sub: sub("rax", "rbx"); break;
+                case BinaryOp::Mul: emit("imul", "rax, rbx"); break;
+                case BinaryOp::Div:
                     set0("rdx");
                     emit("idiv", "rbx");
+                    break;
+                case BinaryOp::And: emit("and", "rax, rbx"); break;
+                case BinaryOp::Or:  emit("or",  "rax, rbx"); break;
+                case BinaryOp::Eq:   emit("cmp", "rax, rbx"); emit("sete",  "al"); emit("movzx", "rax, al"); break;
+                case BinaryOp::NotEq: emit("cmp", "rax, rbx"); emit("setne", "al"); emit("movzx", "rax, al"); break;
+                case BinaryOp::Lt:   emit("cmp", "rax, rbx"); emit("setl",  "al"); emit("movzx", "rax, al"); break;
+                case BinaryOp::LtEq: emit("cmp", "rax, rbx"); emit("setle", "al"); emit("movzx", "rax, al"); break;
+                case BinaryOp::Gt:   emit("cmp", "rax, rbx"); emit("setg",  "al"); emit("movzx", "rax, al"); break;
+                case BinaryOp::GtEq: emit("cmp", "rax, rbx"); emit("setge", "al"); emit("movzx", "rax, al"); break;
+                }
+            },
+            [&](const UnaryExpr& n)
+            {
+                traverseAsmGenerator(*n.operand);
+                switch (n.op)
+                {
+                case UnaryOp::Not:
+                    emit("test", "rax, rax");
+                    emit("sete", "al");
+                    emit("movzx", "rax, al");
+                    break;
+                case UnaryOp::Negate:
+                    emit("neg", "rax");
+                    break;
                 }
             },
             [&](const Assignment& n)
@@ -71,21 +101,33 @@ namespace Sinful::AsmGeneration
                 traverseAsmGenerator(*n.value); // Evaluate expr into rax
                 intToString();      // Convert rax to string in buffer
                 
-                // Setup Windows API call (WriteConsoleA)
-                // RDX = Buffer, R8 = Length, RCX = Handle, R9 = NULL
+                // Setup Windows API call (WriteFile)
+                // WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped)
+                // rcx=handle, rdx=buffer, r8=byteCount, r9=&bytes_written, [rsp+20h]=NULL
                 mov("rdx", "rdi");      // rdi was set by intToString to the start of the string
                 mov("r8", "rcx");       // rcx was set by intToString as the count
                 mov("rcx", "[hStdOut]");
-                set0("r9");
+                emit("mov", "r9, OFFSET bytes_written");
+                mov("qword ptr [rsp+20h]", "0"); // lpOverlapped = NULL (5th arg on stack)
 
                 // Shadow space is already reserved in main's prologue
-                emit("call", "WriteConsoleA");
+                emit("call", "WriteFile");
             },
             [&](const ScopeNode& n)
             {
                 SymbolTable scopeSymbols{ &_symbolTable };
-                for (auto& node : n.statements)
-                    traverseAsmGenerator(*node);
+                for (auto& stmt : n.statements)
+                {
+                    try
+                    {
+                        traverseAsmGenerator(*stmt);
+                    }
+                    catch (const CompilerException& e)
+                    {
+                        if (_errorReporter) _errorReporter->report(e);
+                        else throw;
+                    }
+                }
             }
         }, node.data);
     }
@@ -98,7 +140,7 @@ namespace Sinful::AsmGeneration
         output << "option casemap:none\n";
         output << "includelib kernel32.lib\n";
         output << "EXTERN GetStdHandle:PROC\n";
-        output << "EXTERN WriteConsoleA:PROC\n";
+        output << "EXTERN WriteFile:PROC\n";
         output << "EXTERN ExitProcess:PROC\n\n";
 
         output << ".data\n" << _dataSection.str() << "\n";
@@ -119,6 +161,50 @@ namespace Sinful::AsmGeneration
         return output.str();
     }
 
+    void Generator::generateFunction(const std::string& name, const Node& body, std::stringstream& output)
+    {
+        std::stringstream priorCode;
+        _codeSection.swap(priorCode);
+
+        int savedPeak = _symbolTable.peakStackOffset;
+        _symbolTable.peakStackOffset = -8;
+
+        traverseAsmGenerator(body);
+
+        output << name << " PROC\n";
+        setupStackFrame(output);
+        if (_requiresPrint) getStdOutHandle(output);
+        output << _codeSection.str();
+        tearDownStackFrame(output);
+        set0("ecx", output);
+        emit("call", "ExitProcess", output);
+        output << name << " ENDP\n";
+
+        _codeSection.swap(priorCode);
+        _symbolTable.peakStackOffset = savedPeak;
+    }
+
+    std::string Generator::generateFinal(const Node& program)
+    {
+        std::stringstream codeOutput;
+        codeOutput << ".code\n";
+        generateFunction("main", program, codeOutput);
+        codeOutput << "END\n";
+
+        generateGlobalData();
+
+        std::stringstream output;
+        output << "option casemap:none\n";
+        output << "includelib kernel32.lib\n";
+        output << "EXTERN GetStdHandle:PROC\n";
+        output << "EXTERN WriteFile:PROC\n";
+        output << "EXTERN ExitProcess:PROC\n\n";
+        output << ".data\n" << _dataSection.str() << "\n";
+        output << codeOutput.str();
+
+        return output.str();
+    }
+
     void Generator::generateGlobalData()
     {
         if (_requiresPrint)
@@ -127,6 +213,7 @@ namespace Sinful::AsmGeneration
             _dataSection << "hStdOut dq 0\n";
             _dataSection << "negative_flag db 0\n";
             _dataSection << "global_buffer db 24 dup(0)\n";
+            _dataSection << "bytes_written dd 0\n";
         }
     }
 
@@ -134,10 +221,9 @@ namespace Sinful::AsmGeneration
     {
         // Convert integer in RAX to string, filling in characters from the end
         // RDI: Current pos in buffer, RCX: chars written
-        std::string labelId = std::to_string(_labelCounter++);
-        std::string posLabel = "pos_" + labelId;
-        std::string loopLabel = "conv_" + labelId;
-        std::string endLabel = "done_" + labelId;
+        auto posLabel  = freshLabel("pos");
+        auto loopLabel = freshLabel("conv");
+        auto endLabel  = freshLabel("done");
 
         // Reset negative flag
         mov("byte ptr [negative_flag]", "0");
@@ -148,7 +234,7 @@ namespace Sinful::AsmGeneration
         emit("neg", "rax");
         mov("byte ptr [negative_flag]", "1");
 
-        emit(posLabel + ":");
+        emitLabel(posLabel);
         emit("lea", "rdi, [global_buffer + 22]"); // Leave space for newline
         mov("rbx", "10");
         set0("rcx");
@@ -156,7 +242,7 @@ namespace Sinful::AsmGeneration
         emit("inc", "rcx");
 
         // Conversion Loop
-        emit(loopLabel + ":");
+        emitLabel(loopLabel);
         set0("rdx");
         emit("div", "rbx");
         add("dl", "'0'");
@@ -173,7 +259,7 @@ namespace Sinful::AsmGeneration
         emit("dec", "rdi");
         emit("inc", "rcx");
 
-        emit(endLabel + ":");
+        emitLabel(endLabel);
         emit("inc", "rdi"); // Points RDI to the first character to print
     }
 
@@ -242,5 +328,20 @@ namespace Sinful::AsmGeneration
     void Generator::set0(const std::string& reg, std::stringstream& target)
     {
         emit("xor", reg + ", " + reg, target);
+    }
+
+    std::string Generator::freshLabel(const std::string& prefix)
+    {
+        return prefix + "_" + std::to_string(_labelCounter++);
+    }
+
+    void Generator::emitLabel(const std::string& label, std::stringstream& target)
+    {
+        target << label << ":\n";
+    }
+
+    void Generator::emitLabel(const std::string& label)
+    {
+        emitLabel(label, _codeSection);
     }
 }

@@ -5,12 +5,20 @@ using namespace Sinful::Types;
 
 namespace Sinful::Symbols
 {
-	SymbolTable::SymbolTable(SymbolTableManager* manager) : _manager(manager), _parent(manager->currentTable) 
+	SymbolTable::SymbolTable(SymbolTableManager* manager)
+		: _manager(manager), _parent(manager->currentTable),
+		  _savedStackOffset(manager->currentStackOffset)
 	{
 		_manager->currentTable = this;
 	}
 
-	SymbolTable::~SymbolTable() { _manager->currentTable = _parent; _parent = nullptr; }
+	SymbolTable::~SymbolTable()
+	{
+		if (_parent != nullptr)
+			_manager->currentStackOffset = _savedStackOffset;
+		_manager->currentTable = _parent;
+		_parent = nullptr;
+	}
 
 	const Symbol& SymbolTable::addLocalVariable(const std::string& name, Type type, bool initialised)
 	{
@@ -26,6 +34,8 @@ namespace Sinful::Symbols
 		int alignedSize = (size + 7) & ~7;
 		if (alignedSize == 0) alignedSize = 8;
 		_manager->currentStackOffset -= alignedSize;
+		if (_manager->currentStackOffset < _manager->peakStackOffset)
+			_manager->peakStackOffset = _manager->currentStackOffset;
 		return _symbols.at(name);
 	}
 
@@ -88,5 +98,5 @@ namespace Sinful::Symbols
 		_parent->ensureInitialised(name);
 	}
 
-	int SymbolTable::getTotalStackSize() const { return std::abs(_manager->currentStackOffset + 8); }
+	int SymbolTable::getTotalStackSize() const { return std::abs(_manager->peakStackOffset + 8); }
 }

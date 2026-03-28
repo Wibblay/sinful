@@ -26,7 +26,7 @@ namespace Sinful::Lexer
 	static std::string_view consumeWord(Scanner& sc)
 	{
 		size_t start = sc.position;
-		while (std::isalnum(sc.peek())) sc.advance();
+		while (std::isalnum(sc.peek()) || sc.peek() == '_') sc.advance();
 		return sc.source.substr(start, sc.position - start);
 	}
 
@@ -58,20 +58,20 @@ namespace Sinful::Lexer
 				auto loc = sc.currentLoc();
 				tokens.add({ TokenType::IntLiteral, std::string(val), loc });
 			}
-			else if (std::isalpha(c))
+			else if (std::isalpha(c) || c == '_')
 			{
 				auto val = consumeWord(sc);
 				auto loc = sc.currentLoc();
-				if (val == "print")
-					tokens.add({ TokenType::Print, loc });
-				else if (val == "i32")
-					tokens.add({ TokenType::I32Type, loc });
-				else if (val == "bool")
-					tokens.add({ TokenType::BoolType, loc });
-				else if (val == "true")
-					tokens.add({ TokenType::True, loc });
-				else if (val == "false")
-					tokens.add({ TokenType::False, loc });
+				static const std::unordered_map<std::string_view, TokenType> keywords = {
+					{ "print", TokenType::Print   },
+					{ "i32",   TokenType::I32Type },
+					{ "bool",  TokenType::BoolType },
+					{ "true",  TokenType::True    },
+					{ "false", TokenType::False   },
+				};
+				auto it = keywords.find(val);
+				if (it != keywords.end())
+					tokens.add({ it->second, loc });
 				else
 					tokens.add({ TokenType::Variable, std::string(val), loc });
 			}
@@ -126,6 +126,34 @@ namespace Sinful::Lexer
 					}
 					else
 						tokens.add({ TokenType::GreaterThan, loc });
+				}
+				else if (c == '&')
+				{
+					if (c2 == '&')
+					{
+						tokens.add({ TokenType::AmpAmp, loc });
+						sc.advance();
+					}
+					else
+						throw CompilerException(Diagnostic{
+							Exceptions::Diagnostic::Level::Error,
+							loc,
+							std::string("Unrecognised character encountered while lexing: ") + c
+						});
+				}
+				else if (c == '|')
+				{
+					if (c2 == '|')
+					{
+						tokens.add({ TokenType::PipePipe, loc });
+						sc.advance();
+					}
+					else
+						throw CompilerException(Diagnostic{
+							Exceptions::Diagnostic::Level::Error,
+							loc,
+							std::string("Unrecognised character encountered while lexing: ") + c
+						});
 				}
 				else
 				{

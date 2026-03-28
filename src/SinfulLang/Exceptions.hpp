@@ -68,8 +68,17 @@ namespace Sinful::Exceptions
             }
         }
 
+        void report(const CompilerException& e)
+        {
+            handleException(e);
+            ++_errorCount;
+        }
+
+        bool hasErrors() const { return _errorCount > 0; }
+
     private:
 
         std::unordered_map<std::string, std::vector<std::string>> _fileBuffers;
+        int _errorCount = 0;
     };
 }

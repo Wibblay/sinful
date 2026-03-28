@@ -10,9 +10,13 @@ namespace Sinful::Nodes
 {
 	struct Node;
 
+	enum class BinaryOp { Add, Sub, Mul, Div, Eq, NotEq, Lt, LtEq, Gt, GtEq, And, Or };
+	enum class UnaryOp  { Negate, Not };
+
 	struct LiteralNode  { std::string value; };
 	struct VariableNode { std::string name; };
-	struct BinaryExpr   { std::string op; std::unique_ptr<Node> left; std::unique_ptr<Node> right; };
+	struct UnaryExpr    { UnaryOp  op; std::unique_ptr<Node> operand; };
+	struct BinaryExpr   { BinaryOp op; std::unique_ptr<Node> left; std::unique_ptr<Node> right; };
 	struct Assignment
 	{
 		std::string name;
@@ -28,6 +32,7 @@ namespace Sinful::Nodes
 		LiteralNode,
 		VariableNode,
 		BinaryExpr,
+		UnaryExpr,
 		Assignment,
 		Declaration,
 		PrintStmt,

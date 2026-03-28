@@ -5,6 +5,7 @@ using namespace Sinful::Tokens;
 using namespace Sinful::Nodes;
 using namespace Sinful::Parser;
 using namespace Sinful::Exceptions;
+using namespace Sinful::Types;
 
 static SourceLocation defaultLoc{ "", 0, 0 };
 static SourceLocation testLoc{ "", 1, 4 };
@@ -26,12 +27,12 @@ TEST(ParserTest, RespectsOperatorPrecedence)
     // Root should be "+" (the lowest precedence handled last)
     ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
     auto& binExpr = std::get<BinaryExpr>(root->data);
-    EXPECT_EQ(binExpr.op, "+");
+    EXPECT_EQ(binExpr.op, BinaryOp::Add);
 
     // Right child should be "*"
     ASSERT_TRUE(std::holds_alternative<BinaryExpr>(binExpr.right->data));
     auto& rightSide = std::get<BinaryExpr>(binExpr.right->data);
-    EXPECT_EQ(rightSide.op, "*");
+    EXPECT_EQ(rightSide.op, BinaryOp::Mul);
 }
 
 TEST(ParserTest, ParsesUntypedAssignment)
@@ -152,4 +153,213 @@ TEST(ParserTest, ThrowsOnUnclosedScope)
     };
     TokenStream stream(tokens);
     EXPECT_THROW(parseStatement(stream), CompilerException);
+}
+
+TEST(ParserTest, ParsesBooleanComparison)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "x", loc},
+        {TokenType::GreaterThan, ">", loc},
+        {TokenType::IntLiteral, "5", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
+    auto& binExpr = std::get<BinaryExpr>(root->data);
+    EXPECT_EQ(binExpr.op, BinaryOp::Gt);
+    EXPECT_EQ(root->type, Type::boolean());
+}
+
+TEST(ParserTest, ParsesNotEquals)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "x", loc},
+        {TokenType::ExclEquals, "!=", loc},
+        {TokenType::IntLiteral, "5", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
+    auto& binExpr = std::get<BinaryExpr>(root->data);
+    EXPECT_EQ(binExpr.op, BinaryOp::NotEq);
+    EXPECT_EQ(root->type, Type::boolean());
+}
+
+TEST(ParserTest, ParsesLogicalAnd)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "a", loc},
+        {TokenType::AmpAmp, "&&", loc},
+        {TokenType::Variable, "b", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
+    auto& binExpr = std::get<BinaryExpr>(root->data);
+    EXPECT_EQ(binExpr.op, BinaryOp::And);
+    EXPECT_EQ(root->type, Type::boolean());
+}
+
+TEST(ParserTest, ParsesLogicalOr)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "a", loc},
+        {TokenType::PipePipe, "||", loc},
+        {TokenType::Variable, "b", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
+    auto& binExpr = std::get<BinaryExpr>(root->data);
+    EXPECT_EQ(binExpr.op, BinaryOp::Or);
+    EXPECT_EQ(root->type, Type::boolean());
+}
+
+TEST(ParserTest, ParsesLogicalNot)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Exclamation, "!", loc},
+        {TokenType::Variable, "a", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& unaryExpr = std::get<UnaryExpr>(root->data);
+    EXPECT_EQ(unaryExpr.op, UnaryOp::Not);
+    EXPECT_EQ(root->type, Type::boolean());
+}
+
+TEST(ParserTest, ParsesDoubleNot)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Exclamation, "!", loc},
+        {TokenType::Exclamation, "!", loc},
+        {TokenType::Variable, "a", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& outer = std::get<UnaryExpr>(root->data);
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(outer.operand->data));
+}
+
+TEST(ParserTest, ParsesBooleanAssignment)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "flag", loc},
+        {TokenType::Equals, "=", loc},
+        {TokenType::Variable, "x", loc},
+        {TokenType::GreaterThan, ">", loc},
+        {TokenType::IntLiteral, "5", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseStatement(stream);
+
+    ASSERT_TRUE(std::holds_alternative<Assignment>(root->data));
+    EXPECT_EQ(root->type, Type::boolean());
+    auto& assign = std::get<Assignment>(root->data);
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(assign.value->data));
+    auto& binExpr = std::get<BinaryExpr>(assign.value->data);
+    EXPECT_EQ(binExpr.op, BinaryOp::Gt);
+}
+
+TEST(ParserTest, RejectsArithmeticOnBooleans)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::True, loc},
+        {TokenType::Plus, "+", loc},
+        {TokenType::False, loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    EXPECT_THROW(parseExpression(stream), CompilerException);
+}
+
+TEST(ParserTest, ParsesUnaryMinusOnLiteral)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Minus, "-", loc},
+        {TokenType::IntLiteral, "5", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& unaryExpr = std::get<UnaryExpr>(root->data);
+    EXPECT_EQ(unaryExpr.op, UnaryOp::Negate);
+    EXPECT_EQ(root->type, Type::i32());
+    ASSERT_TRUE(std::holds_alternative<LiteralNode>(unaryExpr.operand->data));
+    auto& literal = std::get<LiteralNode>(unaryExpr.operand->data);
+    EXPECT_EQ(literal.value, "5");
+}
+
+TEST(ParserTest, ParsesUnaryMinusOnVariable)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Minus, "-", loc},
+        {TokenType::Variable, "x", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& unaryExpr = std::get<UnaryExpr>(root->data);
+    EXPECT_EQ(unaryExpr.op, UnaryOp::Negate);
+    ASSERT_TRUE(std::holds_alternative<VariableNode>(unaryExpr.operand->data));
+    auto& varNode = std::get<VariableNode>(unaryExpr.operand->data);
+    EXPECT_EQ(varNode.name, "x");
+}
+
+TEST(ParserTest, ParsesPrecedenceComparisonOverLogical)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Variable, "a", loc},
+        {TokenType::GreaterThan, ">", loc},
+        {TokenType::Variable, "b", loc},
+        {TokenType::AmpAmp, "&&", loc},
+        {TokenType::Variable, "c", loc},
+        {TokenType::LessThan, "<", loc},
+        {TokenType::Variable, "d", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(root->data));
+    auto& andExpr = std::get<BinaryExpr>(root->data);
+    EXPECT_EQ(andExpr.op, BinaryOp::And);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(andExpr.left->data));
+    auto& leftExpr = std::get<BinaryExpr>(andExpr.left->data);
+    EXPECT_EQ(leftExpr.op, BinaryOp::Gt);
+
+    ASSERT_TRUE(std::holds_alternative<BinaryExpr>(andExpr.right->data));
+    auto& rightExpr = std::get<BinaryExpr>(andExpr.right->data);
+    EXPECT_EQ(rightExpr.op, BinaryOp::Lt);
 }

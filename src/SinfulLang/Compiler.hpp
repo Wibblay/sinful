@@ -13,15 +13,11 @@ namespace Sinful
 	{
 	public:
 		Compiler(std::string inputFile, std::string outputFile) : _inputFile(inputFile),
-			_outputFile(outputFile)
-		{
-			_generator = new AsmGeneration::Generator();
-		};
+			_outputFile(outputFile),
+			_generator(std::make_unique<AsmGeneration::Generator>())
+		{};
 
-		virtual ~Compiler()
-		{
-			delete _generator;
-		}
+		virtual ~Compiler() = default;
 
 		int Compile() const
 		{
@@ -29,8 +25,8 @@ namespace Sinful
 			std::ifstream stream(_inputFile);
 
 			std::string lineBuffer;
-			std::istringstream lineStream;
 			Exceptions::ErrorReporter errorReporter{};
+			_generator->setErrorReporter(&errorReporter);
 			try
 			{
 				Lexer::Scanner sc{ _inputFile };
@@ -43,7 +39,15 @@ namespace Sinful
 				}
 
 				auto program = Parser::parseProgram(tokenised);
-				_generator->traverseAsmGenerator(*program);
+				auto asmOutput = _generator->generateFinal(*program);
+
+				if (errorReporter.hasErrors())
+					return EXIT_FAILURE;
+
+				std::ofstream out(_outputFile);
+				if (!out)
+					throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
+				out << asmOutput;
 			}
 			catch (const Exceptions::CompilerException& e)
 			{
@@ -56,10 +60,6 @@ namespace Sinful
 				return EXIT_FAILURE;
 			}
 
-			std::ofstream out(_outputFile);
-			if (!out)
-				throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
-			out << _generator->generateFinal();
 			return EXIT_SUCCESS;
 		}
 
@@ -67,6 +67,6 @@ namespace Sinful
 
 		std::string _inputFile;
 		std::string _outputFile;
-		AsmGeneration::Generator* _generator;
+		std::unique_ptr<AsmGeneration::Generator> _generator;
 	};
 }

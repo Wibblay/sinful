@@ -28,6 +28,8 @@ namespace Sinful::Tokens
 		LeOrEqual,
 		GrOrEqual,
 		DubEquals,
+		AmpAmp,
+		PipePipe,
 
 		// Types
 		I32Type,
