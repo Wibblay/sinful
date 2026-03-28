@@ -44,6 +44,9 @@ namespace Sinful::AsmGeneration
         void set0(const std::string& reg, std::stringstream& target);
         void set0(const std::string& reg) { set0(reg, _codeSection); }
 
+        void emitLabel(const std::string& label, std::stringstream& target);
+        void emitLabel(const std::string& label);
+
     private:
 
         // -- High-level Helpers --
@@ -56,6 +59,7 @@ namespace Sinful::AsmGeneration
         void generateGlobalData();
         void intToString();
         void getStdOutHandle(std::stringstream& target);
+        std::string freshLabel(const std::string& prefix);
 
         Symbols::SymbolTableManager _symbolTable;
         std::stringstream _dataSection;

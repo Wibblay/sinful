@@ -7,6 +7,31 @@ using namespace Sinful::Types;
 
 namespace Sinful::Parser
 {
+	static BinaryOp tokenTypeToBinaryOp(TokenType type)
+	{
+	    switch (type)
+	    {
+	        using enum TokenType;
+	    case Plus:         return BinaryOp::Add;
+	    case Minus:        return BinaryOp::Sub;
+	    case Star:         return BinaryOp::Mul;
+	    case FSlash:       return BinaryOp::Div;
+	    case DubEquals:    return BinaryOp::Eq;
+	    case ExclEquals:   return BinaryOp::NotEq;
+	    case LessThan:     return BinaryOp::Lt;
+	    case LeOrEqual:    return BinaryOp::LtEq;
+	    case GreaterThan:  return BinaryOp::Gt;
+	    case GrOrEqual:    return BinaryOp::GtEq;
+	    case AmpAmp:       return BinaryOp::And;
+	    case PipePipe:     return BinaryOp::Or;
+	    default:
+	        throw CompilerException(Diagnostic{
+	            Diagnostic::Level::Error, {},
+	            "Token '" + tokenTypeToString(type) + "' is not a binary operator"
+	        });
+	    }
+	}
+
 	static std::unique_ptr<Node> parseAddSub(TokenStream& tokens);
 	static std::unique_ptr<Node> parseTerm(TokenStream& tokens);
 	static std::unique_ptr<Node> parseUnary(TokenStream& tokens);
@@ -104,7 +129,7 @@ namespace Sinful::Parser
 			TokenType::GreaterThan, TokenType::GrOrEqual }))
 		{
 			auto loc = left->location;
-			std::string op = tokens.peek().lexeme();
+			BinaryOp op = tokenTypeToBinaryOp(tokens.peek().type());
 			tokens.next();
 			auto right = parseAddSub(tokens);
 			resolveNodeTypes(*left, *right);
@@ -124,7 +149,7 @@ namespace Sinful::Parser
 			auto right = parseCondition(tokens);
 			expectType(*left, Type::boolean(), "&& operator requires boolean operands");
 			expectType(*right, Type::boolean(), "&& operator requires boolean operands");
-			left = std::make_unique<Node>(BinaryExpr{ "&&", std::move(left), std::move(right) },
+			left = std::make_unique<Node>(BinaryExpr{ BinaryOp::And, std::move(left), std::move(right) },
 				Type::boolean(), loc);
 		}
 		return left;
@@ -140,7 +165,7 @@ namespace Sinful::Parser
 			auto right = parseLogicalAnd(tokens);
 			expectType(*left, Type::boolean(), "|| operator requires boolean operands");
 			expectType(*right, Type::boolean(), "|| operator requires boolean operands");
-			left = std::make_unique<Node>(BinaryExpr{ "||", std::move(left), std::move(right) },
+			left = std::make_unique<Node>(BinaryExpr{ BinaryOp::Or, std::move(left), std::move(right) },
 				Type::boolean(), loc);
 		}
 		return left;
@@ -156,7 +181,7 @@ namespace Sinful::Parser
 		auto left = parseTerm(tokens);
 		while (tokens.peek().is({ TokenType::Plus, TokenType::Minus }))
 		{
-			std::string op = tokens.peek().lexeme();
+			BinaryOp op = tokenTypeToBinaryOp(tokens.peek().type());
 			tokens.next();
 			auto right = parseTerm(tokens);
 			resolveNodeTypes(*left, *right);
@@ -172,7 +197,7 @@ namespace Sinful::Parser
 		auto left = parseUnary(tokens);
 		while (tokens.peek().is({ TokenType::Star, TokenType::FSlash }))
 		{
-			std::string op = tokens.peek().lexeme();
+			BinaryOp op = tokenTypeToBinaryOp(tokens.peek().type());
 			tokens.next();
 			auto right = parseUnary(tokens);
 			resolveNodeTypes(*left, *right);
@@ -190,7 +215,7 @@ namespace Sinful::Parser
 			tokens.next();
 			auto operand = parseUnary(tokens);
 			expectType(*operand, Type::boolean(), "! operator requires boolean operand");
-			return std::make_unique<Node>(UnaryExpr{ "!", std::move(operand) }, Type::boolean(), loc);
+			return std::make_unique<Node>(UnaryExpr{ UnaryOp::Not, std::move(operand) }, Type::boolean(), loc);
 		}
 		if (tokens.peek().is(TokenType::Minus))
 		{
@@ -198,7 +223,7 @@ namespace Sinful::Parser
 			tokens.next();
 			auto operand = parseUnary(tokens);
 			expectType(*operand, Type::i32(), "Unary - operator requires i32 operand");
-			return std::make_unique<Node>(UnaryExpr{ "-", std::move(operand) }, Type::i32(), loc);
+			return std::make_unique<Node>(UnaryExpr{ UnaryOp::Negate, std::move(operand) }, Type::i32(), loc);
 		}
 		return parseFactor(tokens);
 	}

@@ -62,16 +62,16 @@ namespace Sinful::Lexer
 			{
 				auto val = consumeWord(sc);
 				auto loc = sc.currentLoc();
-				if (val == "print")
-					tokens.add({ TokenType::Print, loc });
-				else if (val == "i32")
-					tokens.add({ TokenType::I32Type, loc });
-				else if (val == "bool")
-					tokens.add({ TokenType::BoolType, loc });
-				else if (val == "true")
-					tokens.add({ TokenType::True, loc });
-				else if (val == "false")
-					tokens.add({ TokenType::False, loc });
+				static const std::unordered_map<std::string_view, TokenType> keywords = {
+					{ "print", TokenType::Print   },
+					{ "i32",   TokenType::I32Type },
+					{ "bool",  TokenType::BoolType },
+					{ "true",  TokenType::True    },
+					{ "false", TokenType::False   },
+				};
+				auto it = keywords.find(val);
+				if (it != keywords.end())
+					tokens.add({ it->second, loc });
 				else
 					tokens.add({ TokenType::Variable, std::string(val), loc });
 			}

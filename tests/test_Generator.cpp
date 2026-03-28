@@ -11,7 +11,7 @@ TEST(GeneratorTest, GeneratesCorrectMathAsm)
     // Simulate: x = 5 + 10;
     auto left = std::make_unique<Node>(LiteralNode{ "5" });
     auto right = std::make_unique<Node>(LiteralNode{ "10" });
-    auto bin = std::make_unique<Node>(BinaryExpr{ "+", std::move(left), std::move(right) });
+    auto bin = std::make_unique<Node>(BinaryExpr{ BinaryOp::Add, std::move(left), std::move(right) });
     auto assign = std::make_unique<Node>(Assignment{ "x", std::move(bin) });
 
     gen.traverseAsmGenerator(*assign);
@@ -53,7 +53,7 @@ TEST(GeneratorTest, GeneratesEqualityComparison)
     Generator gen;
     auto left = std::make_unique<Node>(LiteralNode{ "5" }, Type::i32());
     auto right = std::make_unique<Node>(LiteralNode{ "5" }, Type::i32());
-    auto bin = std::make_unique<Node>(BinaryExpr{ "==", std::move(left), std::move(right) }, Type::boolean());
+    auto bin = std::make_unique<Node>(BinaryExpr{ BinaryOp::Eq, std::move(left), std::move(right) }, Type::boolean());
     auto assign = std::make_unique<Node>(Assignment{ "result", std::move(bin) }, Type::boolean());
 
     gen.traverseAsmGenerator(*assign);
@@ -69,7 +69,7 @@ TEST(GeneratorTest, GeneratesLogicalAnd)
     Generator gen;
     auto left = std::make_unique<Node>(LiteralNode{ "1" }, Type::boolean());
     auto right = std::make_unique<Node>(LiteralNode{ "0" }, Type::boolean());
-    auto bin = std::make_unique<Node>(BinaryExpr{ "&&", std::move(left), std::move(right) }, Type::boolean());
+    auto bin = std::make_unique<Node>(BinaryExpr{ BinaryOp::And, std::move(left), std::move(right) }, Type::boolean());
     auto assign = std::make_unique<Node>(Assignment{ "result", std::move(bin) }, Type::boolean());
 
     gen.traverseAsmGenerator(*assign);
@@ -82,7 +82,7 @@ TEST(GeneratorTest, GeneratesLogicalNot)
 {
     Generator gen;
     auto operand = std::make_unique<Node>(LiteralNode{ "1" }, Type::boolean());
-    auto unary = std::make_unique<Node>(UnaryExpr{ "!", std::move(operand) }, Type::boolean());
+    auto unary = std::make_unique<Node>(UnaryExpr{ UnaryOp::Not, std::move(operand) }, Type::boolean());
     auto assign = std::make_unique<Node>(Assignment{ "result", std::move(unary) }, Type::boolean());
 
     gen.traverseAsmGenerator(*assign);
@@ -97,7 +97,7 @@ TEST(GeneratorTest, GeneratesUnaryMinus)
 {
     Generator gen;
     auto operand = std::make_unique<Node>(LiteralNode{ "5" }, Type::i32());
-    auto unary = std::make_unique<Node>(UnaryExpr{ "-", std::move(operand) }, Type::i32());
+    auto unary = std::make_unique<Node>(UnaryExpr{ UnaryOp::Negate, std::move(operand) }, Type::i32());
     auto assign = std::make_unique<Node>(Assignment{ "result", std::move(unary) }, Type::i32());
 
     gen.traverseAsmGenerator(*assign);
