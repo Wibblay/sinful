@@ -26,7 +26,7 @@ namespace Sinful::Lexer
 	static std::string_view consumeWord(Scanner& sc)
 	{
 		size_t start = sc.position;
-		while (std::isalnum(sc.peek())) sc.advance();
+		while (std::isalnum(sc.peek()) || sc.peek() == '_') sc.advance();
 		return sc.source.substr(start, sc.position - start);
 	}
 
@@ -58,7 +58,7 @@ namespace Sinful::Lexer
 				auto loc = sc.currentLoc();
 				tokens.add({ TokenType::IntLiteral, std::string(val), loc });
 			}
-			else if (std::isalpha(c))
+			else if (std::isalpha(c) || c == '_')
 			{
 				auto val = consumeWord(sc);
 				auto loc = sc.currentLoc();
