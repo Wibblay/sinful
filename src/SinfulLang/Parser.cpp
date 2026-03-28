@@ -53,7 +53,7 @@ namespace Sinful::Parser
 			return std::make_unique<Node>(PrintStmt{ std::move(expr) }, Type::i32(), loc);
 		}
 
-		// Untyped assignment: Variable = [Type] Expr ;   or   Variable = Type ;  (default init)
+		// Assignment: Variable = [Type] Expr ;   or   Variable = Type ;  (default init)
 		if (tokens.peek().is(TokenType::Variable) && tokens.peek(1).is(TokenType::Equals))
 		{
 			std::string name = tokens.peek().lexeme();
@@ -190,6 +190,14 @@ namespace Sinful::Parser
 			auto operand = parseUnary(tokens);
 			expectType(*operand, Type::boolean(), "! operator requires boolean operand");
 			return std::make_unique<Node>(UnaryExpr{ "!", std::move(operand) }, Type::boolean(), loc);
+		}
+		if (tokens.peek().is(TokenType::Minus))
+		{
+			auto loc = tokens.peek().location();
+			tokens.next();
+			auto operand = parseUnary(tokens);
+			expectType(*operand, Type::i32(), "Unary - operator requires i32 operand");
+			return std::make_unique<Node>(UnaryExpr{ "-", std::move(operand) }, Type::i32(), loc);
 		}
 		return parseFactor(tokens);
 	}

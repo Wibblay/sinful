@@ -62,9 +62,20 @@ namespace Sinful::AsmGeneration
             [&](const UnaryExpr& n)
             {
                 traverseAsmGenerator(*n.operand);
-                emit("test", "rax, rax");
-                emit("sete", "al");
-                emit("movzx", "rax, al");
+                if (n.op == "!")
+                {
+                    emit("test", "rax, rax");
+                    emit("sete", "al");
+                    emit("movzx", "rax, al");
+                }
+                else if (n.op == "-")
+                {
+                    emit("neg", "rax");
+                }
+                else
+                {
+                    throw std::runtime_error("Unrecognised unary operator: " + n.op);
+                }
             },
             [&](const Assignment& n)
             {

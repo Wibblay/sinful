@@ -92,3 +92,16 @@ TEST(GeneratorTest, GeneratesLogicalNot)
     EXPECT_NE(result.find("sete"), std::string::npos);
     EXPECT_NE(result.find("movzx"), std::string::npos);
 }
+
+TEST(GeneratorTest, GeneratesUnaryMinus)
+{
+    Generator gen;
+    auto operand = std::make_unique<Node>(LiteralNode{ "5" }, Type::i32());
+    auto unary = std::make_unique<Node>(UnaryExpr{ "-", std::move(operand) }, Type::i32());
+    auto assign = std::make_unique<Node>(Assignment{ "result", std::move(unary) }, Type::i32());
+
+    gen.traverseAsmGenerator(*assign);
+    std::string result = gen.generateFinal();
+
+    EXPECT_NE(result.find("neg     rax"), std::string::npos);
+}

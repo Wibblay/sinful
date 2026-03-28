@@ -296,6 +296,45 @@ TEST(ParserTest, RejectsArithmeticOnBooleans)
     EXPECT_THROW(parseExpression(stream), CompilerException);
 }
 
+TEST(ParserTest, ParsesUnaryMinusOnLiteral)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Minus, "-", loc},
+        {TokenType::IntLiteral, "5", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& unaryExpr = std::get<UnaryExpr>(root->data);
+    EXPECT_EQ(unaryExpr.op, "-");
+    EXPECT_EQ(root->type, Type::i32());
+    ASSERT_TRUE(std::holds_alternative<LiteralNode>(unaryExpr.operand->data));
+    auto& literal = std::get<LiteralNode>(unaryExpr.operand->data);
+    EXPECT_EQ(literal.value, "5");
+}
+
+TEST(ParserTest, ParsesUnaryMinusOnVariable)
+{
+    static SourceLocation loc{ "", 0, 0 };
+    std::vector<Token> tokens = {
+        {TokenType::Minus, "-", loc},
+        {TokenType::Variable, "x", loc},
+        {TokenType::SemiColon, ";", loc}
+    };
+    TokenStream stream(tokens);
+    auto root = parseExpression(stream);
+
+    ASSERT_TRUE(std::holds_alternative<UnaryExpr>(root->data));
+    auto& unaryExpr = std::get<UnaryExpr>(root->data);
+    EXPECT_EQ(unaryExpr.op, "-");
+    ASSERT_TRUE(std::holds_alternative<VariableNode>(unaryExpr.operand->data));
+    auto& varNode = std::get<VariableNode>(unaryExpr.operand->data);
+    EXPECT_EQ(varNode.name, "x");
+}
+
 TEST(ParserTest, ParsesPrecedenceComparisonOverLogical)
 {
     static SourceLocation loc{ "", 0, 0 };
