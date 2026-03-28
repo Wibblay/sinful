@@ -1,0 +1,6 @@
+x = 3 + 4;
+print x;
+y = 10 - 3;
+print y;
+z = 6 * 7;
+print z;

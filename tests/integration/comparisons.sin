@@ -1,0 +1,12 @@
+a = 5 == 5;
+print a;
+b = 3 != 3;
+print b;
+c = 2 < 5;
+print c;
+d = 5 <= 5;
+print d;
+e = 7 > 3;
+print e;
+f = 2 >= 9;
+print f;

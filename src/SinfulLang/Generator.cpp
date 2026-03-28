@@ -107,15 +107,17 @@ namespace Sinful::AsmGeneration
                 traverseAsmGenerator(*n.value); // Evaluate expr into rax
                 intToString();      // Convert rax to string in buffer
                 
-                // Setup Windows API call (WriteConsoleA)
-                // RDX = Buffer, R8 = Length, RCX = Handle, R9 = NULL
+                // Setup Windows API call (WriteFile)
+                // WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped)
+                // rcx=handle, rdx=buffer, r8=byteCount, r9=&bytes_written, [rsp+20h]=NULL
                 mov("rdx", "rdi");      // rdi was set by intToString to the start of the string
                 mov("r8", "rcx");       // rcx was set by intToString as the count
                 mov("rcx", "[hStdOut]");
-                set0("r9");
+                emit("mov", "r9, OFFSET bytes_written");
+                mov("qword ptr [rsp+20h]", "0"); // lpOverlapped = NULL (5th arg on stack)
 
                 // Shadow space is already reserved in main's prologue
-                emit("call", "WriteConsoleA");
+                emit("call", "WriteFile");
             },
             [&](const ScopeNode& n)
             {
@@ -134,7 +136,7 @@ namespace Sinful::AsmGeneration
         output << "option casemap:none\n";
         output << "includelib kernel32.lib\n";
         output << "EXTERN GetStdHandle:PROC\n";
-        output << "EXTERN WriteConsoleA:PROC\n";
+        output << "EXTERN WriteFile:PROC\n";
         output << "EXTERN ExitProcess:PROC\n\n";
 
         output << ".data\n" << _dataSection.str() << "\n";
@@ -163,6 +165,7 @@ namespace Sinful::AsmGeneration
             _dataSection << "hStdOut dq 0\n";
             _dataSection << "negative_flag db 0\n";
             _dataSection << "global_buffer db 24 dup(0)\n";
+            _dataSection << "bytes_written dd 0\n";
         }
     }
 
