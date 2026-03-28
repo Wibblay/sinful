@@ -116,8 +116,18 @@ namespace Sinful::AsmGeneration
             [&](const ScopeNode& n)
             {
                 SymbolTable scopeSymbols{ &_symbolTable };
-                for (auto& node : n.statements)
-                    traverseAsmGenerator(*node);
+                for (auto& stmt : n.statements)
+                {
+                    try
+                    {
+                        traverseAsmGenerator(*stmt);
+                    }
+                    catch (const CompilerException& e)
+                    {
+                        if (_errorReporter) _errorReporter->report(e);
+                        else throw;
+                    }
+                }
             }
         }, node.data);
     }
@@ -147,6 +157,50 @@ namespace Sinful::AsmGeneration
 
         output << "main ENDP\n";
         output << "END\n";
+
+        return output.str();
+    }
+
+    void Generator::generateFunction(const std::string& name, const Node& body, std::stringstream& output)
+    {
+        std::stringstream priorCode;
+        _codeSection.swap(priorCode);
+
+        int savedPeak = _symbolTable.peakStackOffset;
+        _symbolTable.peakStackOffset = -8;
+
+        traverseAsmGenerator(body);
+
+        output << name << " PROC\n";
+        setupStackFrame(output);
+        if (_requiresPrint) getStdOutHandle(output);
+        output << _codeSection.str();
+        tearDownStackFrame(output);
+        set0("ecx", output);
+        emit("call", "ExitProcess", output);
+        output << name << " ENDP\n";
+
+        _codeSection.swap(priorCode);
+        _symbolTable.peakStackOffset = savedPeak;
+    }
+
+    std::string Generator::generateFinal(const Node& program)
+    {
+        std::stringstream codeOutput;
+        codeOutput << ".code\n";
+        generateFunction("main", program, codeOutput);
+        codeOutput << "END\n";
+
+        generateGlobalData();
+
+        std::stringstream output;
+        output << "option casemap:none\n";
+        output << "includelib kernel32.lib\n";
+        output << "EXTERN GetStdHandle:PROC\n";
+        output << "EXTERN WriteFile:PROC\n";
+        output << "EXTERN ExitProcess:PROC\n\n";
+        output << ".data\n" << _dataSection.str() << "\n";
+        output << codeOutput.str();
 
         return output.str();
     }

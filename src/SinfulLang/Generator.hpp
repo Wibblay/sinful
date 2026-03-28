@@ -21,6 +21,9 @@ namespace Sinful::AsmGeneration
 
         void traverseAsmGenerator(const Nodes::Node& node);
         std::string generateFinal();
+        std::string generateFinal(const Nodes::Node& program);
+
+        void setErrorReporter(Exceptions::ErrorReporter* reporter) { _errorReporter = reporter; }
 
         // -- Low-level Emitters --
         void emit(const std::string& instr, const std::string& ops, std::stringstream& target);
@@ -50,6 +53,7 @@ namespace Sinful::AsmGeneration
     private:
 
         // -- High-level Helpers --
+        void generateFunction(const std::string& name, const Nodes::Node& body, std::stringstream& output);
         void setupStackFrame(std::stringstream& target);
         void setupStackFrame() { setupStackFrame(_codeSection); }
 
@@ -69,5 +73,6 @@ namespace Sinful::AsmGeneration
         int _stringLiteralCounter = 0;
         bool _requiresPrint = false;
         int _lastLocalSpaceReserved = 0;
+        Exceptions::ErrorReporter* _errorReporter = nullptr;
     };
 }

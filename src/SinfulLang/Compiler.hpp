@@ -25,8 +25,8 @@ namespace Sinful
 			std::ifstream stream(_inputFile);
 
 			std::string lineBuffer;
-			std::istringstream lineStream;
 			Exceptions::ErrorReporter errorReporter{};
+			_generator->setErrorReporter(&errorReporter);
 			try
 			{
 				Lexer::Scanner sc{ _inputFile };
@@ -39,12 +39,15 @@ namespace Sinful
 				}
 
 				auto program = Parser::parseProgram(tokenised);
-				_generator->traverseAsmGenerator(*program);
+				auto asmOutput = _generator->generateFinal(*program);
+
+				if (errorReporter.hasErrors())
+					return EXIT_FAILURE;
 
 				std::ofstream out(_outputFile);
 				if (!out)
 					throw std::runtime_error("Failed to open assembly output file: " + _outputFile);
-				out << _generator->generateFinal();
+				out << asmOutput;
 			}
 			catch (const Exceptions::CompilerException& e)
 			{
